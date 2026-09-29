@@ -204,3 +204,79 @@
   font-size: 0.95rem;
   padding: 2rem 0;
 }
+
+.page-wide {
+  max-width: 720px;
+}
+
+.room-section {
+  width: 100%;
+  text-align: left;
+}
+
+.room-section h2 {
+  margin-bottom: 0.85rem;
+}
+
+.talk-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.talk-card {
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: 16px;
+  padding: 1.25rem;
+  text-align: left;
+}
+
+.talk-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.talk-time {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.talk-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+}
+
+.talk-speaker {
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+}
+
+.talk-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.talk-actions .button {
+  padding: 0.6rem 1.25rem;
+  font-size: 0.85rem;
+}
+
+.pin-input {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated-2);
+  color: var(--text);
+  font-size: 1.4rem;
+  letter-spacing: 0.4em;
+  text-align: center;
+}

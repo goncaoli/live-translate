@@ -1,7 +1,14 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import axios from "axios";
+import { verifyToken } from "../lib/speakerToken";
 
-export async function speechToken(_request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+export async function speechToken(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  const talkId = request.query.get("talkId");
+  const token = request.headers.get("x-speaker-token");
+  if (!talkId || !verifyToken(token, talkId)) {
+    return { status: 401, jsonBody: { error: "Token de orador inválido ou em falta" } };
+  }
+
   const key = process.env.SPEECH_KEY;
   const region = process.env.SPEECH_REGION;
   if (!key || !region) {

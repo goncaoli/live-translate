@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import type { HubConnection } from "@microsoft/signalr";
 import { SUPPORTED_LANGUAGES } from "../lib/languages";
 import { connect } from "../lib/signalr";
-import { joinGroup, announcePresence } from "../lib/api";
+import { joinGroup, announcePresence, getAgenda, type Talk } from "../lib/api";
 
 interface Caption {
   text: string;
@@ -13,13 +13,14 @@ interface Caption {
 function friendlyError(err: unknown): string {
   const message = err instanceof Error ? err.message : String(err);
   if (message.includes("404") || message.includes("negotiate")) {
-    return "Não foi possível ligar à sessão. Verifica se o código está certo.";
+    return "Não foi possível ligar à sessão. Tenta novamente.";
   }
   return "Algo correu mal. Tenta novamente.";
 }
 
-export default function ViewerPage() {
-  const { sessionId = "" } = useParams();
+export default function JoinTalkPage() {
+  const { talkId = "" } = useParams();
+  const [talk, setTalk] = useState<Talk | null>(null);
   const [lang, setLang] = useState(SUPPORTED_LANGUAGES[1]?.code ?? "en");
   const [joined, setJoined] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -27,6 +28,12 @@ export default function ViewerPage() {
   const [error, setError] = useState<string | null>(null);
   const [captions, setCaptions] = useState<Caption[]>([]);
   const connectionRef = useRef<HubConnection | null>(null);
+
+  useEffect(() => {
+    getAgenda()
+      .then((agenda) => setTalk(agenda.talks.find((t) => t.id === talkId) ?? null))
+      .catch(() => {});
+  }, [talkId]);
 
   useEffect(() => {
     return () => {
@@ -38,8 +45,8 @@ export default function ViewerPage() {
     setError(null);
     setJoining(true);
     try {
-      const connection = await connect(sessionId, (connectionId) => {
-        joinGroup(connectionId, sessionId, lang)
+      const connection = await connect(talkId, (connectionId) => {
+        joinGroup(connectionId, talkId, lang)
           .then(() => setConnectionState("live"))
           .catch(() => {});
       });
@@ -49,8 +56,8 @@ export default function ViewerPage() {
       connection.onreconnecting(() => setConnectionState("reconnecting"));
       connection.onreconnected(() => setConnectionState("live"));
 
-      await joinGroup(connection.connectionId ?? "", sessionId, lang);
-      announcePresence(sessionId).catch(() => {});
+      await joinGroup(connection.connectionId ?? "", talkId, lang);
+      announcePresence(talkId).catch(() => {});
       connectionRef.current = connection;
       setJoined(true);
     } catch (err) {
@@ -63,8 +70,8 @@ export default function ViewerPage() {
   if (!joined) {
     return (
       <div className="page">
-        <span className="eyebrow">Sessão {sessionId}</span>
-        <h1>Escolhe o teu idioma</h1>
+        <span className="eyebrow">{talk?.speaker}</span>
+        <h1>{talk?.title ?? "Escolhe o teu idioma"}</h1>
         <select className="lang-select" value={lang} onChange={(e) => setLang(e.target.value)}>
           {SUPPORTED_LANGUAGES.map((l) => (
             <option key={l.code} value={l.code}>

@@ -27,6 +27,13 @@ export async function presence(request: HttpRequest, context: InvocationContext)
       target: "participantJoined",
       arguments: [],
     },
+    {
+      // Lets the agenda page keep a live per-talk participant count without
+      // joining one SignalR group per talk.
+      groupName: groupName("agenda", "live"),
+      target: "participantJoined",
+      arguments: [{ talkId: body.sessionId }],
+    },
   ]);
 
   return { status: 204 };

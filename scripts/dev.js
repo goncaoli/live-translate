@@ -1,4 +1,4 @@
-const { spawn } = require("node:child_process");
+const { spawn, spawnSync } = require("node:child_process");
 const path = require("node:path");
 const fs = require("node:fs");
 
@@ -15,6 +15,12 @@ if (fs.existsSync(portableNodeDir)) {
 } else {
   console.log("No portable Node 20 found under .tools/ — using system Node for everything.");
 }
+
+// `func start` runs whatever is already in api/dist — it doesn't compile TS
+// on its own, so a stale dist/ silently serves outdated functions locally.
+console.log("Building API...");
+const build = spawnSync("npm run build --prefix api", { stdio: "inherit", shell: true, env });
+if (build.status !== 0) process.exit(build.status ?? 1);
 
 const command =
   'npx swa start http://localhost:5173 --api-location api --host 0.0.0.0 --swa-config-location client/public --run "npm run dev --prefix client"';

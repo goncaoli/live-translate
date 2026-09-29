@@ -5,7 +5,8 @@
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "AzureSignalRConnectionString": "<connection string from your SignalR Service resource, Serverless mode>",
     "SPEECH_KEY": "<key from your Azure AI Speech resource>",
-    "SPEECH_REGION": "<region, e.g. westeurope>"
+    "SPEECH_REGION": "<region, e.g. westeurope>",
+    "SPEAKER_TOKEN_SECRET": "<random string, e.g. `openssl rand -hex 32` — signs the speaker PIN tokens>"
   },
   "Host": {
     "CORS": "*"

@@ -1,10 +1,21 @@
 import { useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import type { HubConnection } from "@microsoft/signalr";
 import type { TranslationRecognizer } from "microsoft-cognitiveservices-speech-sdk";
-import { createSessionId, joinUrl } from "../lib/session";
+import { joinUrl } from "../lib/session";
 import { PRESENCE_LANG, SOURCE_LANGUAGE, SUPPORTED_LANGUAGES } from "../lib/languages";
-import { getSpeechToken, broadcast, joinGroup } from "../lib/api";
+import {
+  getAgenda,
+  getSpeechToken,
+  broadcast,
+  joinGroup,
+  verifyPin,
+  talkStarted,
+  talkEnded,
+  talkEndedBeacon,
+  type Talk,
+} from "../lib/api";
 import { connect } from "../lib/signalr";
 import { startTranslation, stopTranslation } from "../lib/speech";
 
@@ -18,8 +29,14 @@ function friendlyError(err: unknown): string {
   return "Algo correu mal. Tenta novamente.";
 }
 
-export default function SpeakerPage() {
-  const [sessionId] = useState(createSessionId);
+export default function SpeakTalkPage() {
+  const { talkId = "" } = useParams();
+  const [talk, setTalk] = useState<Talk | null>(null);
+  const [pin, setPin] = useState("");
+  const [speakerToken, setSpeakerToken] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [pinError, setPinError] = useState<string | null>(null);
+
   const [listening, setListening] = useState(false);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,21 +45,39 @@ export default function SpeakerPage() {
   const [copied, setCopied] = useState(false);
   const recognizerRef = useRef<TranslationRecognizer | null>(null);
   const presenceConnectionRef = useRef<HubConnection | null>(null);
+  const listeningRef = useRef(false);
 
   useEffect(() => {
+    getAgenda()
+      .then((agenda) => setTalk(agenda.talks.find((t) => t.id === talkId) ?? null))
+      .catch(() => {});
+  }, [talkId]);
+
+  useEffect(() => {
+    function handlePageHide() {
+      if (listeningRef.current && speakerToken) {
+        talkEndedBeacon(talkId, speakerToken);
+      }
+    }
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
+  }, [talkId, speakerToken]);
+
+  useEffect(() => {
+    if (!speakerToken) return;
     let cancelled = false;
 
     async function trackPresence() {
       try {
-        const connection = await connect(sessionId, (connectionId) => {
-          joinGroup(connectionId, sessionId, PRESENCE_LANG).catch(() => {});
+        const connection = await connect(talkId, (connectionId) => {
+          joinGroup(connectionId, talkId, PRESENCE_LANG).catch(() => {});
         });
         if (cancelled) {
           connection.stop();
           return;
         }
         connection.on("participantJoined", () => setParticipants((n) => n + 1));
-        await joinGroup(connection.connectionId ?? "", sessionId, PRESENCE_LANG);
+        await joinGroup(connection.connectionId ?? "", talkId, PRESENCE_LANG);
         presenceConnectionRef.current = connection;
       } catch {
         // Presence is a nice-to-have; a failure here shouldn't block the session.
@@ -54,24 +89,45 @@ export default function SpeakerPage() {
     return () => {
       cancelled = true;
       presenceConnectionRef.current?.stop();
+    };
+  }, [talkId, speakerToken]);
+
+  useEffect(() => {
+    return () => {
       if (recognizerRef.current) stopTranslation(recognizerRef.current).catch(() => {});
     };
-  }, [sessionId]);
+  }, []);
+
+  async function submitPin() {
+    setPinError(null);
+    setVerifying(true);
+    try {
+      const { token } = await verifyPin(talkId, pin);
+      setSpeakerToken(token);
+    } catch {
+      setPinError("PIN inválido.");
+    } finally {
+      setVerifying(false);
+    }
+  }
 
   async function start() {
+    if (!speakerToken) return;
     setError(null);
     setStarting(true);
     try {
-      const { token, region } = await getSpeechToken();
+      const { token, region } = await getSpeechToken(talkId, speakerToken);
       const recognizer = await startTranslation(token, region, SOURCE_LANGUAGE, TARGET_LANGUAGES, {
         onFinal: (original, translations) => {
           setTranscript((prev) => [original, ...prev].slice(0, 20));
-          broadcast(sessionId, original, translations).catch((err) => setError(friendlyError(err)));
+          broadcast(talkId, original, translations, speakerToken).catch((err) => setError(friendlyError(err)));
         },
         onError: (details) => setError(friendlyError(new Error(details))),
       });
       recognizerRef.current = recognizer;
       setListening(true);
+      listeningRef.current = true;
+      talkStarted(talkId, speakerToken).catch(() => {});
     } catch (err) {
       setError(friendlyError(err));
     } finally {
@@ -85,18 +141,43 @@ export default function SpeakerPage() {
       recognizerRef.current = null;
     }
     setListening(false);
+    listeningRef.current = false;
+    if (speakerToken) talkEnded(talkId, speakerToken).catch(() => {});
   }
 
   async function copyLink() {
-    await navigator.clipboard.writeText(joinUrl(sessionId));
+    await navigator.clipboard.writeText(joinUrl(talkId));
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
 
+  if (!speakerToken) {
+    return (
+      <div className="page">
+        <span className="eyebrow">Acesso de orador</span>
+        <h1>{talk?.title ?? talkId}</h1>
+        {talk && <p className="subtitle">{talk.speaker}</p>}
+        <input
+          className="pin-input"
+          type="password"
+          inputMode="numeric"
+          placeholder="PIN"
+          value={pin}
+          onChange={(e) => setPin(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submitPin()}
+        />
+        <button className="button" onClick={submitPin} disabled={verifying || pin.length === 0}>
+          {verifying ? "A verificar…" : "Entrar como orador →"}
+        </button>
+        {pinError && <p className="error">{pinError}</p>}
+      </div>
+    );
+  }
+
   return (
     <div className="page">
-      <span className="eyebrow">Sessão ativa</span>
-      <h1>{sessionId}</h1>
+      <span className="eyebrow">{talk?.speaker}</span>
+      <h1>{talk?.title ?? talkId}</h1>
 
       <div className={`status-badge ${listening ? "is-live" : ""}`}>
         <span className="status-dot" />
@@ -105,10 +186,9 @@ export default function SpeakerPage() {
 
       <div className="card">
         <div className="qr-frame">
-          <QRCodeSVG value={joinUrl(sessionId)} size={200} />
+          <QRCodeSVG value={joinUrl(talkId)} size={200} />
         </div>
         <div className="session-code">
-          {sessionId}
           <button className="copy-button" onClick={copyLink}>
             {copied ? "Copiado" : "Copiar link"}
           </button>
