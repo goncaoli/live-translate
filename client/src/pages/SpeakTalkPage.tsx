@@ -4,7 +4,7 @@ import { QRCodeSVG } from "qrcode.react";
 import type { HubConnection } from "@microsoft/signalr";
 import type { TranslationRecognizer } from "microsoft-cognitiveservices-speech-sdk";
 import { joinUrl } from "../lib/session";
-import { PRESENCE_LANG, SOURCE_LANGUAGE, SUPPORTED_LANGUAGES } from "../lib/languages";
+import { PRESENCE_LANG, SOURCE_LANGUAGE, getSelectableLanguages } from "../lib/languages";
 import {
   getAgenda,
   getSpeechToken,
@@ -19,8 +19,6 @@ import {
 import { connect } from "../lib/signalr";
 import { startTranslation, stopTranslation } from "../lib/speech";
 import { formatByline } from "../lib/countdown";
-
-const TARGET_LANGUAGES = SUPPORTED_LANGUAGES.filter((l) => l.code !== "pt").map((l) => l.code);
 
 function friendlyError(err: unknown): string {
   const message = err instanceof Error ? err.message : String(err);
@@ -119,7 +117,9 @@ export default function SpeakTalkPage() {
     setStarting(true);
     try {
       const { token, region } = await getSpeechToken(talkId, speakerToken);
-      const recognizer = await startTranslation(token, region, SOURCE_LANGUAGE, TARGET_LANGUAGES, {
+      const sourceLanguage = talk?.sourceLanguage ?? SOURCE_LANGUAGE;
+      const targetLanguages = getSelectableLanguages(sourceLanguage).map((l) => l.code);
+      const recognizer = await startTranslation(token, region, sourceLanguage, targetLanguages, {
         onFinal: (original, translations) => {
           setTranscript((prev) => [original, ...prev].slice(0, 20));
           broadcast(talkId, original, translations, speakerToken).catch((err) => setError(friendlyError(err)));

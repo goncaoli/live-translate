@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import type { HubConnection } from "@microsoft/signalr";
-import { SUPPORTED_LANGUAGES } from "../lib/languages";
+import { SOURCE_LANGUAGE, SUPPORTED_LANGUAGES, getSelectableLanguages } from "../lib/languages";
 import { connect } from "../lib/signalr";
 import { joinGroup, announcePresence, announceLeave, announceLeaveBeacon, getAgenda, type Talk } from "../lib/api";
 import { formatByline } from "../lib/countdown";
@@ -31,6 +31,13 @@ export default function JoinTalkPage() {
   const connectionRef = useRef<HubConnection | null>(null);
   const joinedRef = useRef(false);
 
+  const selectableLanguages = talk ? getSelectableLanguages(talk.sourceLanguage ?? SOURCE_LANGUAGE) : SUPPORTED_LANGUAGES;
+  // If the talk's source language turns out to exclude the currently
+  // selected one (e.g. it loaded after mount and matches the default pick),
+  // fall back to the first still-valid option — derived at render time
+  // instead of synced via an effect.
+  const effectiveLang = selectableLanguages.some((l) => l.code === lang) ? lang : (selectableLanguages[0]?.code ?? lang);
+
   useEffect(() => {
     getAgenda()
       .then((agenda) => setTalk(agenda.talks.find((t) => t.id === talkId) ?? null))
@@ -57,7 +64,7 @@ export default function JoinTalkPage() {
     setJoining(true);
     try {
       const connection = await connect(talkId, (connectionId) => {
-        joinGroup(connectionId, talkId, lang)
+        joinGroup(connectionId, talkId, effectiveLang)
           .then(() => setConnectionState("live"))
           .catch(() => {});
       });
@@ -67,7 +74,7 @@ export default function JoinTalkPage() {
       connection.onreconnecting(() => setConnectionState("reconnecting"));
       connection.onreconnected(() => setConnectionState("live"));
 
-      await joinGroup(connection.connectionId ?? "", talkId, lang);
+      await joinGroup(connection.connectionId ?? "", talkId, effectiveLang);
       announcePresence(talkId).catch(() => {});
       connectionRef.current = connection;
       joinedRef.current = true;
@@ -84,8 +91,8 @@ export default function JoinTalkPage() {
       <div className="page">
         <span className="eyebrow">{talk ? formatByline(talk.speaker, talk.speakerRole) : ""}</span>
         <h1>{talk?.title ?? "Escolhe o teu idioma"}</h1>
-        <select className="lang-select" value={lang} onChange={(e) => setLang(e.target.value)}>
-          {SUPPORTED_LANGUAGES.map((l) => (
+        <select className="lang-select" value={effectiveLang} onChange={(e) => setLang(e.target.value)}>
+          {selectableLanguages.map((l) => (
             <option key={l.code} value={l.code}>
               {l.label}
             </option>

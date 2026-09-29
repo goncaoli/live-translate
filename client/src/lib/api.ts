@@ -82,6 +82,7 @@ export interface Talk {
   startsAt: string;
   endsAt: string;
   type?: TalkType;
+  sourceLanguage?: string;
 }
 
 export interface AgendaResponse {

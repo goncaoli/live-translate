@@ -19,3 +19,13 @@ export const SOURCE_LANGUAGE = "pt-PT";
 
 // Matches the group suffix the API uses for presence pings (api/src/functions/presence.ts).
 export const PRESENCE_LANG = "presence";
+
+// Excludes whatever the talk is actually spoken in (e.g. a Google DeepMind
+// speaker presenting in en-US) from both the speaker's translation targets
+// and the viewer's language picker — otherwise picking that language would
+// silently never show anything, since nothing broadcasts a translation into
+// the source language itself.
+export function getSelectableLanguages(sourceLanguage: string): LanguageOption[] {
+  const sourcePrefix = sourceLanguage.split("-")[0].toLowerCase();
+  return SUPPORTED_LANGUAGES.filter((l) => l.code.toLowerCase() !== sourcePrefix);
+}

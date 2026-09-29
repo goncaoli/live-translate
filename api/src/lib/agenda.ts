@@ -17,6 +17,11 @@ export interface Talk {
   startsAt: string;
   endsAt: string;
   type?: TalkType;
+  // BCP-47 locale the speaker actually talks in, e.g. "en-US" for an
+  // international speaker. Defaults to pt-PT (client/src/lib/languages.ts)
+  // when unset. Set this per-talk for any session not spoken in Portuguese —
+  // otherwise the recognizer listens for the wrong language.
+  sourceLanguage?: string;
   pin: string;
 }
 
@@ -180,12 +185,10 @@ export const TALKS: Talk[] = [
 
   // Slot 14:40–15:00
   {
-    // TODO: título cortado no print — confirmar texto completo
     id: "ai-engine-growth-productivity",
     roomId: "tribuna-presidencial",
-    title: "AI as an Engine of Growth: Productivity, Competitiveness a…",
+    title: "AI as an Engine of Growth: Productivity, Competitiveness and New Models of Economic Value",
     speaker: "",
-    speakerRole: "Productivity, competitiveness and new…", // TODO: descrição cortada no print
     startsAt: at("14:40"),
     endsAt: at("15:00"),
     pin: EVENT_PIN,
@@ -222,11 +225,11 @@ export const TALKS: Talk[] = [
     pin: EVENT_PIN,
   },
   {
-    // TODO: título cortado no print — confirmar texto completo
     id: "healthcare-agentic-ai-portugal",
     roomId: "sala-campeoes-europeus",
-    title: "The Next Generation of Healthcare in Portugal with Agentic AI -…",
+    title: "The Next Generation of Healthcare in Portugal with Agentic AI",
     speaker: "",
+    speakerRole: "Powered by Google Cloud",
     startsAt: at("15:10"),
     endsAt: at("15:30"),
     pin: EVENT_PIN,
@@ -244,12 +247,11 @@ export const TALKS: Talk[] = [
 
   // Slot 15:40–16:00
   {
-    // TODO: título e descrição cortados no print — confirmar texto completo
     id: "transformation-no-longer-waits",
     roomId: "tribuna-presidencial",
-    title: "Transformation No Longer Waits for Anyone — Powered by…",
+    title: "Transformation No Longer Waits for Anyone",
     speaker: "",
-    speakerRole: "Speed, governance and responsible…",
+    speakerRole: "Powered by ServiceNow",
     startsAt: at("15:40"),
     endsAt: at("16:00"),
     pin: EVENT_PIN,
