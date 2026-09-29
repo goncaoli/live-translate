@@ -17,7 +17,7 @@ if (fs.existsSync(portableNodeDir)) {
 }
 
 const command =
-  'npx swa start http://localhost:5173 --api-location api --host 0.0.0.0 --run "npm run dev --prefix client"';
+  'npx swa start http://localhost:5173 --api-location api --host 0.0.0.0 --swa-config-location client/public --run "npm run dev --prefix client"';
 const child = spawn(command, { stdio: "inherit", shell: true, env });
 
 child.on("exit", (code) => process.exit(code ?? 0));
