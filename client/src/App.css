@@ -261,7 +261,10 @@
 .period-section {
   width: 100%;
   text-align: left;
-  margin-top: 0.5rem;
+  margin-top: 1.25rem;
+  border: 1px dashed var(--period-accent, var(--border));
+  border-radius: 16px;
+  padding: 1.1rem 1.1rem 1.25rem;
 }
 
 .period-header {
@@ -310,11 +313,11 @@
 .period-count-badge {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  border: 1px solid var(--border);
+  gap: 0.5rem;
+  border: 1px solid var(--period-accent, var(--border));
   border-radius: 999px;
-  padding: 0.35rem 0.75rem;
-  color: var(--text-muted);
+  padding: 0.35rem 0.5rem 0.35rem 0.75rem;
+  color: var(--period-accent, var(--text-muted));
   font-size: 0.8rem;
 }
 
@@ -322,12 +325,18 @@
   color: var(--text);
 }
 
-.chevron {
-  display: inline-block;
+.chevron-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  border: 1px solid currentColor;
   transition: transform 0.2s ease;
 }
 
-.chevron.is-collapsed {
+.chevron-circle.is-collapsed {
   transform: rotate(-90deg);
 }
 
@@ -341,17 +350,16 @@
 .room-tab {
   padding: 0.45rem 0.9rem;
   border-radius: 999px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--room-color, var(--border));
   background: transparent;
-  color: var(--text-muted);
+  color: var(--room-color, var(--text-muted));
   font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
 }
 
 .room-tab.is-active {
-  background: var(--bg-elevated-2);
-  color: var(--text);
-  border-color: var(--text-muted);
+  background: color-mix(in srgb, var(--room-color, var(--text-muted)) 18%, transparent);
 }
 
 .timeline-list {

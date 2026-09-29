@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { HubConnection } from "@microsoft/signalr";
 import { getAgenda, joinGroup, type AgendaResponse, type Talk } from "../lib/api";
@@ -9,6 +9,8 @@ import {
   formatTime,
   getPeriod,
   getPhase,
+  getRoomColor,
+  PERIOD_ACCENTS,
   PERIOD_LABELS,
   TAG_LABELS,
   type Period,
@@ -143,8 +145,14 @@ export default function HomePage() {
         const start = formatTime(talks[0].startsAt);
         const end = formatTime(talks[talks.length - 1].endsAt);
 
+        const periodAccent = PERIOD_ACCENTS[period];
+
         return (
-          <section key={period} className="period-section">
+          <section
+            key={period}
+            className="period-section"
+            style={{ "--period-accent": periodAccent } as CSSProperties}
+          >
             <button className="period-header" onClick={() => togglePeriod(period)}>
               <div>
                 <span className={`period-label period-${period}`}>{PERIOD_LABELS[period]}</span>
@@ -155,7 +163,7 @@ export default function HomePage() {
               <span className="period-count-badge">
                 <strong>{talks.length}</strong>
                 <span>sessões</span>
-                <span className={`chevron ${isCollapsed ? "is-collapsed" : ""}`} aria-hidden="true">
+                <span className={`chevron-circle ${isCollapsed ? "is-collapsed" : ""}`} aria-hidden="true">
                   ⌄
                 </span>
               </span>
@@ -169,6 +177,7 @@ export default function HomePage() {
                       <button
                         key={roomId}
                         className={`room-tab ${selectedRoom === roomId ? "is-active" : ""}`}
+                        style={{ "--room-color": getRoomColor(rooms, roomId) } as CSSProperties}
                         onClick={() => setActiveRoom((prev) => ({ ...prev, [period]: roomId }))}
                       >
                         {roomName(roomId)}

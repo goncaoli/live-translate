@@ -52,6 +52,22 @@ export const PERIOD_LABELS: Record<Period, string> = {
   evening: "Noite",
 };
 
+export const PERIOD_ACCENTS: Record<Period, string> = {
+  morning: "#60a5fa",
+  afternoon: "#bef264",
+  evening: "#f0abfc",
+};
+
+// Each room in a breakout/parallel block gets its own accent colour (matching
+// the reference event site), assigned by first-seen order rather than a
+// hardcoded room id so it keeps working if rooms are renamed or added.
+const ROOM_PALETTE = ["#60a5fa", "#bef264", "#2dd4bf", "#f0abfc", "#fb923c"];
+
+export function getRoomColor(rooms: string[], roomId: string): string {
+  const index = rooms.indexOf(roomId);
+  return ROOM_PALETTE[index % ROOM_PALETTE.length] ?? ROOM_PALETTE[0];
+}
+
 export const TAG_LABELS: Record<string, string> = {
   host: "Host",
   keynote: "Keynote",
