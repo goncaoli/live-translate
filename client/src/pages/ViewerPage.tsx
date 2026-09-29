@@ -3,17 +3,27 @@ import { useParams } from "react-router-dom";
 import type { HubConnection } from "@microsoft/signalr";
 import { SUPPORTED_LANGUAGES } from "../lib/languages";
 import { connect } from "../lib/signalr";
-import { joinGroup } from "../lib/api";
+import { joinGroup, announcePresence } from "../lib/api";
 
 interface Caption {
   text: string;
   original: string;
 }
 
+function friendlyError(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err);
+  if (message.includes("404") || message.includes("negotiate")) {
+    return "Não foi possível ligar à sessão. Verifica se o código está certo.";
+  }
+  return "Algo correu mal. Tenta novamente.";
+}
+
 export default function ViewerPage() {
   const { sessionId = "" } = useParams();
   const [lang, setLang] = useState(SUPPORTED_LANGUAGES[1]?.code ?? "en");
   const [joined, setJoined] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [connectionState, setConnectionState] = useState<"live" | "reconnecting">("live");
   const [error, setError] = useState<string | null>(null);
   const [captions, setCaptions] = useState<Caption[]>([]);
   const connectionRef = useRef<HubConnection | null>(null);
@@ -26,33 +36,44 @@ export default function ViewerPage() {
 
   async function enter() {
     setError(null);
+    setJoining(true);
     try {
-      const connection = await connect(sessionId);
+      const connection = await connect(sessionId, (connectionId) => {
+        joinGroup(connectionId, sessionId, lang)
+          .then(() => setConnectionState("live"))
+          .catch(() => {});
+      });
       connection.on("translation", (payload: Caption) => {
         setCaptions((prev) => [payload, ...prev].slice(0, 30));
       });
+      connection.onreconnecting(() => setConnectionState("reconnecting"));
+      connection.onreconnected(() => setConnectionState("live"));
+
       await joinGroup(connection.connectionId ?? "", sessionId, lang);
+      announcePresence(sessionId).catch(() => {});
       connectionRef.current = connection;
       setJoined(true);
     } catch (err) {
-      setError(String(err));
+      setError(friendlyError(err));
+    } finally {
+      setJoining(false);
     }
   }
 
   if (!joined) {
     return (
       <div className="page">
+        <span className="eyebrow">Sessão {sessionId}</span>
         <h1>Escolhe o teu idioma</h1>
-        <p>Sessão: {sessionId}</p>
-        <select value={lang} onChange={(e) => setLang(e.target.value)}>
+        <select className="lang-select" value={lang} onChange={(e) => setLang(e.target.value)}>
           {SUPPORTED_LANGUAGES.map((l) => (
             <option key={l.code} value={l.code}>
               {l.label}
             </option>
           ))}
         </select>
-        <button className="button" onClick={enter}>
-          Entrar
+        <button className="button" onClick={enter} disabled={joining}>
+          {joining ? "A entrar…" : "Entrar →"}
         </button>
         {error && <p className="error">{error}</p>}
       </div>
@@ -61,15 +82,22 @@ export default function ViewerPage() {
 
   return (
     <div className="page">
-      <h1>Legendas</h1>
-      <ul className="captions">
-        {captions.map((c, i) => (
-          <li key={i} className={i === 0 ? "caption-latest" : ""}>
-            {c.text}
-          </li>
-        ))}
-      </ul>
-      {captions.length === 0 && <p>À espera do orador…</p>}
+      <div className={`status-badge ${connectionState === "live" ? "is-live" : "is-error"}`}>
+        <span className="status-dot" />
+        {connectionState === "live" ? "Ligado" : "A reconectar…"}
+      </div>
+
+      {captions.length === 0 ? (
+        <p className="empty-state">À espera do orador…</p>
+      ) : (
+        <ul className="captions">
+          {captions.map((c, i) => (
+            <li key={i} className={i === 0 ? "caption-latest" : ""}>
+              {c.text}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

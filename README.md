@@ -26,8 +26,9 @@ Azure Functions API  ──negotiate/joinGroup──▶  Azure SignalR Service
   - `POST/GET /api/negotiate` — devolve as credenciais de ligação ao Azure SignalR Service para o browser.
   - `POST /api/joinGroup` — junta uma ligação SignalR ao grupo `sessionId:lang`.
   - `POST /api/broadcast` — recebe o texto original + traduções por idioma e envia para cada grupo `sessionId:lang`.
+  - `POST /api/presence` — avisa o grupo `sessionId:presence` quando alguém entra (o orador subscreve este grupo para mostrar quantos participantes estão ligados).
   - `GET /api/speechToken` — emite um token temporário do Azure AI Speech (a chave nunca vai para o browser).
-- `staticwebapp.config.json` — configuração do Azure Static Web Apps (SPA fallback).
+- `client/public/staticwebapp.config.json` — configuração do Azure Static Web Apps (SPA fallback). Tem de estar dentro de `client/`, não na raiz — é aí que o Azure vai procurá-la, já que o `App location` do build é `/client`.
 
 Cada sessão é identificada por um código curto gerado no browser do orador (ex. `X7K2QP`); os grupos do SignalR são `<sessionId>:<idioma>`, por isso não é preciso base de dados — o próprio SignalR trata do encaminhamento.
 

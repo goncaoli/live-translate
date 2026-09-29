@@ -16,3 +16,6 @@ export const SUPPORTED_LANGUAGES: LanguageOption[] = [
 ];
 
 export const SOURCE_LANGUAGE = "pt-PT";
+
+// Matches the group suffix the API uses for presence pings (api/src/functions/presence.ts).
+export const PRESENCE_LANG = "presence";

@@ -30,6 +30,10 @@ export function broadcast(sessionId: string, original: string, translations: Tra
   return postJson("/broadcast", { sessionId, original, translations });
 }
 
+export function announcePresence(sessionId: string): Promise<void> {
+  return postJson("/presence", { sessionId });
+}
+
 export interface SpeechTokenResponse {
   token: string;
   region: string;
