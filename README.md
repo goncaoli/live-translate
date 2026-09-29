@@ -34,16 +34,16 @@ Portal de evento: uma agenda com salas e palestras onde cada participante ouve a
   - `POST /api/joinGroup` — junta uma ligação SignalR ao grupo `talkId:lang`.
   - `POST /api/broadcast` *(exige `X-Speaker-Token`)* — texto original + traduções por idioma, envia para cada grupo `talkId:lang`.
   - `POST /api/talkStarted` / `POST /api/talkEnded` *(exigem `X-Speaker-Token`)* — publicam o estado "ao vivo" no grupo `agenda:live`, que a agenda escuta para atualizar o selo em tempo real.
-  - `POST /api/presence` — avisa `talkId:presence` (contador na página do orador) e `agenda:live` (contador na agenda).
+  - `POST /api/presence` / `POST /api/leave` — avisam `talkId:presence` (contador na página do orador) e `agenda:live` (contador na agenda) quando alguém entra/sai.
   - `GET /api/speechToken?talkId=...` *(exige `X-Speaker-Token`)* — emite um token temporário do Azure AI Speech.
 - `api/src/lib/agenda.ts` — **fonte única da agenda** (salas, palestras, PINs). Edita este ficheiro para pores o evento real.
 - `client/public/staticwebapp.config.json` — configuração do Azure Static Web Apps (SPA fallback). Tem de estar dentro de `client/`, não na raiz.
 
 `talk.id` (definido em `agenda.ts`) é o identificador usado em todo o lado — grupos do SignalR e URLs (`/talk/<id>/join`, `/talk/<id>/speak`). Como é estável, os QR codes de cada palestra podem ser gerados e impressos com antecedência, antes do evento começar.
 
-## Editar a agenda (salas, palestras, PINs)
+## Editar a agenda (salas, palestras, PINs, horários)
 
-Abre `api/src/lib/agenda.ts` e edita os arrays `ROOMS` e `TALKS`. Cada `id` de palestra tem de ser único em todo o ficheiro. O PIN pode ser o que quiseres (não precisa de ser só números). Depois de editar, faz commit e push — o deploy é automático.
+Abre `api/src/lib/agenda.ts` e edita os arrays `ROOMS` e `TALKS`. Cada `id` de palestra tem de ser único em todo o ficheiro. `startsAt`/`endsAt` são ISO 8601 com offset explícito (ex. `2026-10-07T10:00:00+01:00`) — usados para a contagem decrescente e o intervalo de horas mostrados na agenda. O PIN pode ser o que quiseres (atualmente é o mesmo para todas as palestras — o código postal da empresa). Depois de editar, faz commit e push — o deploy é automático.
 
 ## Como funciona a autorização do orador
 
@@ -120,4 +120,4 @@ Neste modo define `VITE_API_BASE=http://localhost:7071/api` num `.env.local` den
 
 - A agenda é um ficheiro estático no código (`api/src/lib/agenda.ts`) — editar requer um novo deploy. Para editar sem tocar em código, o próximo passo seria mover isto para uma tabela (Azure Table Storage).
 - Os idiomas suportados estão fixos em `client/src/lib/languages.ts` — adicionar um idioma-alvo aumenta o custo/latência do Azure Speech Translation (cada idioma extra é uma stream adicional).
-- O selo "AO VIVO" depende do orador carregar em "Parar" (ou fechar o separador normalmente, capturado via `navigator.sendBeacon`); se o browser do orador rebentar sem aviso, o selo pode ficar aceso mais tempo do que devia.
+- O selo "AO VIVO" e o contador de participantes dependem de sinais explícitos (carregar em "Parar"/sair da página, ou fechar o separador normalmente, capturado via `navigator.sendBeacon`). Uma quebra de rede abrupta (wifi cai, bateria acaba) não é detetada — o contador só corrige quando a pessoa volta a entrar ou sai normalmente. Resolver isto por completo exigiria configurar *Upstream webhooks* no recurso SignalR para reagir a desligações reais.

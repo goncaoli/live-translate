@@ -77,6 +77,7 @@ export default function SpeakTalkPage() {
           return;
         }
         connection.on("participantJoined", () => setParticipants((n) => n + 1));
+        connection.on("participantLeft", () => setParticipants((n) => Math.max(0, n - 1)));
         await joinGroup(connection.connectionId ?? "", talkId, PRESENCE_LANG);
         presenceConnectionRef.current = connection;
       } catch {

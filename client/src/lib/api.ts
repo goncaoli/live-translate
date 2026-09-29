@@ -42,6 +42,17 @@ export function announcePresence(sessionId: string): Promise<void> {
   return postJson("/presence", { sessionId });
 }
 
+export function announceLeave(sessionId: string): Promise<void> {
+  return postJson("/leave", { sessionId });
+}
+
+// navigator.sendBeacon best-effort signal for when the viewer's tab closes
+// without the SPA getting a chance to run its normal cleanup.
+export function announceLeaveBeacon(sessionId: string): void {
+  const blob = new Blob([JSON.stringify({ sessionId })], { type: "application/json" });
+  navigator.sendBeacon(`${API_BASE}/leave`, blob);
+}
+
 export interface SpeechTokenResponse {
   token: string;
   region: string;
@@ -66,7 +77,8 @@ export interface Talk {
   title: string;
   speaker: string;
   speakerRole?: string;
-  time: string;
+  startsAt: string;
+  endsAt: string;
 }
 
 export interface AgendaResponse {

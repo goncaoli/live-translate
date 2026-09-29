@@ -9,7 +9,11 @@ export interface Talk {
   title: string;
   speaker: string;
   speakerRole?: string;
-  time: string;
+  // ISO 8601 with explicit offset, e.g. "2026-10-07T10:00:00+01:00" — lets
+  // the client show a live countdown and time range without guessing the
+  // event's timezone.
+  startsAt: string;
+  endsAt: string;
   pin: string;
 }
 
@@ -21,6 +25,8 @@ export const ROOMS: Room[] = [
   { id: "sala-b", name: "Sala B" },
 ];
 
+const EVENT_PIN = "1500180"; // código postal da empresa — partilhado por todas as palestras
+
 export const TALKS: Talk[] = [
   {
     id: "ia-generativa-enterprise",
@@ -28,8 +34,9 @@ export const TALKS: Talk[] = [
     title: "IA Generativa em Contexto Enterprise",
     speaker: "Ana Martins",
     speakerRole: "CTO, Exemplo Corp",
-    time: "10:00 – 10:40",
-    pin: "1234",
+    startsAt: "2026-10-07T10:00:00+01:00",
+    endsAt: "2026-10-07T10:40:00+01:00",
+    pin: EVENT_PIN,
   },
   {
     id: "futuro-do-trabalho",
@@ -37,8 +44,9 @@ export const TALKS: Talk[] = [
     title: "O Futuro do Trabalho com Agentes Autónomos",
     speaker: "João Ferreira",
     speakerRole: "Investigador, Universidade Exemplo",
-    time: "11:00 – 11:40",
-    pin: "5678",
+    startsAt: "2026-10-07T11:00:00+01:00",
+    endsAt: "2026-10-07T11:40:00+01:00",
+    pin: EVENT_PIN,
   },
   {
     id: "scaling-ai-startups",
@@ -46,8 +54,9 @@ export const TALKS: Talk[] = [
     title: "Escalar Startups de IA em Portugal",
     speaker: "Rita Costa",
     speakerRole: "Founder, Exemplo Ventures",
-    time: "10:00 – 10:40",
-    pin: "4321",
+    startsAt: "2026-10-07T10:00:00+01:00",
+    endsAt: "2026-10-07T10:40:00+01:00",
+    pin: EVENT_PIN,
   },
 ];
 

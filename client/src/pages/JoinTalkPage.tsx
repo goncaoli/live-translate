@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import type { HubConnection } from "@microsoft/signalr";
 import { SUPPORTED_LANGUAGES } from "../lib/languages";
 import { connect } from "../lib/signalr";
-import { joinGroup, announcePresence, getAgenda, type Talk } from "../lib/api";
+import { joinGroup, announcePresence, announceLeave, announceLeaveBeacon, getAgenda, type Talk } from "../lib/api";
 
 interface Caption {
   text: string;
@@ -28,6 +28,7 @@ export default function JoinTalkPage() {
   const [error, setError] = useState<string | null>(null);
   const [captions, setCaptions] = useState<Caption[]>([]);
   const connectionRef = useRef<HubConnection | null>(null);
+  const joinedRef = useRef(false);
 
   useEffect(() => {
     getAgenda()
@@ -36,10 +37,19 @@ export default function JoinTalkPage() {
   }, [talkId]);
 
   useEffect(() => {
+    function handlePageHide() {
+      if (joinedRef.current) announceLeaveBeacon(talkId);
+    }
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
+  }, [talkId]);
+
+  useEffect(() => {
     return () => {
       connectionRef.current?.stop();
+      if (joinedRef.current) announceLeave(talkId).catch(() => {});
     };
-  }, []);
+  }, [talkId]);
 
   async function enter() {
     setError(null);
@@ -59,6 +69,7 @@ export default function JoinTalkPage() {
       await joinGroup(connection.connectionId ?? "", talkId, lang);
       announcePresence(talkId).catch(() => {});
       connectionRef.current = connection;
+      joinedRef.current = true;
       setJoined(true);
     } catch (err) {
       setError(friendlyError(err));
