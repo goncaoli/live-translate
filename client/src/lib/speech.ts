@@ -1,9 +1,17 @@
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 
 export interface TranslationHandlers {
-  onInterim?: (original: string) => void;
+  onInterim?: (original: string, translations: Record<string, string>) => void;
   onFinal?: (original: string, translations: Record<string, string>) => void;
   onError?: (details: string) => void;
+}
+
+function extractTranslations(result: sdk.TranslationRecognitionResult, targetLangs: string[]): Record<string, string> {
+  const translations: Record<string, string> = {};
+  for (const lang of targetLangs) {
+    translations[lang] = result.translations.get(lang) ?? "";
+  }
+  return translations;
 }
 
 export async function startTranslation(
@@ -20,17 +28,17 @@ export async function startTranslation(
   const audioConfig = sdk.AudioConfig.fromDefaultMicrophoneInput();
   const recognizer = new sdk.TranslationRecognizer(config, audioConfig);
 
+  // Azure streams partial translations as the speaker talks, not just once
+  // they pause — using them is what makes captions feel live instead of
+  // waiting for each sentence to fully close.
   recognizer.recognizing = (_sender, event) => {
-    handlers.onInterim?.(event.result.text);
+    if (!event.result.text) return;
+    handlers.onInterim?.(event.result.text, extractTranslations(event.result, targetLangs));
   };
 
   recognizer.recognized = (_sender, event) => {
     if (event.result.reason === sdk.ResultReason.TranslatedSpeech) {
-      const translations: Record<string, string> = {};
-      for (const lang of targetLangs) {
-        translations[lang] = event.result.translations.get(lang) ?? "";
-      }
-      handlers.onFinal?.(event.result.text, translations);
+      handlers.onFinal?.(event.result.text, extractTranslations(event.result, targetLangs));
     }
   };
 

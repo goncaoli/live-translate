@@ -20,6 +20,11 @@ import { connect } from "../lib/signalr";
 import { startTranslation, stopTranslation } from "../lib/speech";
 import { formatByline } from "../lib/countdown";
 
+// Caps how often partial (not-yet-final) translations go out while the
+// speaker is mid-sentence — keeps captions feeling live without flooding
+// SignalR with a message on every recognizer tick.
+const INTERIM_BROADCAST_INTERVAL_MS = 250;
+
 function friendlyError(err: unknown): string {
   const message = err instanceof Error ? err.message : String(err);
   if (message.includes("Permission") || message.includes("NotAllowed")) {
@@ -45,6 +50,7 @@ export default function SpeakTalkPage() {
   const recognizerRef = useRef<TranslationRecognizer | null>(null);
   const presenceConnectionRef = useRef<HubConnection | null>(null);
   const listeningRef = useRef(false);
+  const lastInterimSentRef = useRef(0);
 
   useEffect(() => {
     getAgenda()
@@ -120,9 +126,16 @@ export default function SpeakTalkPage() {
       const sourceLanguage = talk?.sourceLanguage ?? SOURCE_LANGUAGE;
       const targetLanguages = getSelectableLanguages(sourceLanguage).map((l) => l.code);
       const recognizer = await startTranslation(token, region, sourceLanguage, targetLanguages, {
+        onInterim: (original, translations) => {
+          const now = Date.now();
+          if (now - lastInterimSentRef.current < INTERIM_BROADCAST_INTERVAL_MS) return;
+          lastInterimSentRef.current = now;
+          broadcast(talkId, original, translations, speakerToken, false).catch(() => {});
+        },
         onFinal: (original, translations) => {
+          lastInterimSentRef.current = Date.now();
           setTranscript((prev) => [original, ...prev].slice(0, 20));
-          broadcast(talkId, original, translations, speakerToken).catch((err) => setError(friendlyError(err)));
+          broadcast(talkId, original, translations, speakerToken, true).catch((err) => setError(friendlyError(err)));
         },
         onError: (details) => setError(friendlyError(new Error(details))),
       });

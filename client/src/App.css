@@ -199,6 +199,11 @@
   border-color: var(--text-muted);
 }
 
+.caption-interim {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 .empty-state {
   color: var(--text-muted);
   font-size: 0.95rem;

@@ -15,6 +15,7 @@ interface BroadcastBody {
   sessionId: string;
   original: string;
   translations: Record<string, string>;
+  isFinal: boolean;
 }
 
 export async function broadcast(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
@@ -31,7 +32,7 @@ export async function broadcast(request: HttpRequest, context: InvocationContext
   const messages = Object.entries(body.translations).map(([lang, text]) => ({
     groupName: groupName(body.sessionId as string, lang),
     target: "translation",
-    arguments: [{ text, original: body.original ?? "" }],
+    arguments: [{ text, original: body.original ?? "", final: body.isFinal ?? true }],
   }));
 
   context.extraOutputs.set(signalRMessages, messages);

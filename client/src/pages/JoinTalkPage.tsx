@@ -9,6 +9,7 @@ import { formatByline } from "../lib/countdown";
 interface Caption {
   text: string;
   original: string;
+  final: boolean;
 }
 
 function friendlyError(err: unknown): string {
@@ -69,7 +70,14 @@ export default function JoinTalkPage() {
           .catch(() => {});
       });
       connection.on("translation", (payload: Caption) => {
-        setCaptions((prev) => [payload, ...prev].slice(0, 30));
+        setCaptions((prev) => {
+          // While the top caption is still in progress, keep updating it in
+          // place instead of stacking a new entry per partial result — a
+          // new entry only starts once the previous one has settled.
+          const stillInProgress = prev.length > 0 && !prev[0].final;
+          const rest = stillInProgress ? prev.slice(1) : prev;
+          return [payload, ...rest].slice(0, 30);
+        });
       });
       connection.onreconnecting(() => setConnectionState("reconnecting"));
       connection.onreconnected(() => setConnectionState("live"));
@@ -118,7 +126,7 @@ export default function JoinTalkPage() {
       ) : (
         <ul className="captions">
           {captions.map((c, i) => (
-            <li key={i} className={i === 0 ? "caption-latest" : ""}>
+            <li key={i} className={i === 0 ? `caption-latest ${c.final ? "" : "caption-interim"}` : ""}>
               {c.text}
             </li>
           ))}

@@ -34,8 +34,9 @@ export function broadcast(
   original: string,
   translations: TranslationMap,
   speakerToken: string,
+  isFinal: boolean,
 ): Promise<void> {
-  return postJson("/broadcast", { sessionId, original, translations }, speakerToken);
+  return postJson("/broadcast", { sessionId, original, translations, isFinal }, speakerToken);
 }
 
 export function announcePresence(sessionId: string): Promise<void> {
