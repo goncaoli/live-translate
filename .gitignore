@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.vscode/
+*.log
+
+# client
+client/dist/
+client/.vite/
+
+# Azure Functions local secrets — never commit
+api/local.settings.json
+api/dist/
+
+# Static Web Apps CLI
+.swa/
+
+# Portable Node runtime used only to run Azure Functions Core Tools locally
+.tools/

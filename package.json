@@ -1,0 +1,13 @@
+{
+  "name": "live-translate",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Legendas em tempo real no telemóvel via QR Code, usando Azure AI Speech + SignalR",
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "build": "npm run build --prefix client"
+  },
+  "devDependencies": {
+    "@azure/static-web-apps-cli": "^2.0.10"
+  }
+}

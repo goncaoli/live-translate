@@ -1,0 +1,13 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "AzureSignalRConnectionString": "<connection string from your SignalR Service resource, Serverless mode>",
+    "SPEECH_KEY": "<key from your Azure AI Speech resource>",
+    "SPEECH_REGION": "<region, e.g. westeurope>"
+  },
+  "Host": {
+    "CORS": "*"
+  }
+}
