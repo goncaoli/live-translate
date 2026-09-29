@@ -71,6 +71,8 @@ export interface Room {
   name: string;
 }
 
+export type TalkType = "host" | "keynote" | "roundtable" | "talk" | "break";
+
 export interface Talk {
   id: string;
   roomId: string;
@@ -79,6 +81,7 @@ export interface Talk {
   speakerRole?: string;
   startsAt: string;
   endsAt: string;
+  type?: TalkType;
 }
 
 export interface AgendaResponse {

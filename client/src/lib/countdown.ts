@@ -32,3 +32,35 @@ export function formatTimeRange(startsAt: string, endsAt: string): string {
   const timeFmt = (d: Date) => d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
   return `${dateLabel} · ${timeFmt(start)}–${timeFmt(end)}`;
 }
+
+export function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+}
+
+export type Period = "morning" | "afternoon" | "evening";
+
+export function getPeriod(iso: string): Period {
+  const hour = new Date(iso).getHours();
+  if (hour < 13) return "morning";
+  if (hour < 19) return "afternoon";
+  return "evening";
+}
+
+export const PERIOD_LABELS: Record<Period, string> = {
+  morning: "Manhã",
+  afternoon: "Tarde",
+  evening: "Noite",
+};
+
+export const TAG_LABELS: Record<string, string> = {
+  host: "Host",
+  keynote: "Keynote",
+  roundtable: "Roundtable",
+  talk: "Talk",
+  break: "Pausa",
+};
+
+export function formatByline(speaker: string, role?: string): string {
+  if (speaker && role) return `${speaker} · ${role}`;
+  return speaker || role || "";
+}

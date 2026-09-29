@@ -4,6 +4,7 @@ import type { HubConnection } from "@microsoft/signalr";
 import { SUPPORTED_LANGUAGES } from "../lib/languages";
 import { connect } from "../lib/signalr";
 import { joinGroup, announcePresence, announceLeave, announceLeaveBeacon, getAgenda, type Talk } from "../lib/api";
+import { formatByline } from "../lib/countdown";
 
 interface Caption {
   text: string;
@@ -81,7 +82,7 @@ export default function JoinTalkPage() {
   if (!joined) {
     return (
       <div className="page">
-        <span className="eyebrow">{talk?.speaker}</span>
+        <span className="eyebrow">{talk ? formatByline(talk.speaker, talk.speakerRole) : ""}</span>
         <h1>{talk?.title ?? "Escolhe o teu idioma"}</h1>
         <select className="lang-select" value={lang} onChange={(e) => setLang(e.target.value)}>
           {SUPPORTED_LANGUAGES.map((l) => (

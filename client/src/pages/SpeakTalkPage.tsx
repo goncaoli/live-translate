@@ -18,6 +18,7 @@ import {
 } from "../lib/api";
 import { connect } from "../lib/signalr";
 import { startTranslation, stopTranslation } from "../lib/speech";
+import { formatByline } from "../lib/countdown";
 
 const TARGET_LANGUAGES = SUPPORTED_LANGUAGES.filter((l) => l.code !== "pt").map((l) => l.code);
 
@@ -157,7 +158,7 @@ export default function SpeakTalkPage() {
       <div className="page">
         <span className="eyebrow">Acesso de orador</span>
         <h1>{talk?.title ?? talkId}</h1>
-        {talk && <p className="subtitle">{talk.speaker}</p>}
+        {talk && <p className="subtitle">{formatByline(talk.speaker, talk.speakerRole)}</p>}
         <input
           className="pin-input"
           type="password"
@@ -177,7 +178,7 @@ export default function SpeakTalkPage() {
 
   return (
     <div className="page">
-      <span className="eyebrow">{talk?.speaker}</span>
+      <span className="eyebrow">{talk ? formatByline(talk.speaker, talk.speakerRole) : ""}</span>
       <h1>{talk?.title ?? talkId}</h1>
 
       <div className={`status-badge ${listening ? "is-live" : ""}`}>
