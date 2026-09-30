@@ -39,7 +39,7 @@ export default function JoinRoomPage() {
   const [now, setNow] = useState(() => new Date());
   const [knownSourceLanguage, setKnownSourceLanguage] = useState<string | null>(null);
   const [roomLive, setRoomLive] = useState(false);
-  const [lang, setLang] = useState(SUPPORTED_LANGUAGES[1]?.code ?? "en");
+  const [lang, setLang] = useState(SUPPORTED_LANGUAGES[0]?.code ?? "en");
   const [joined, setJoined] = useState(false);
   const [joining, setJoining] = useState(false);
   const [connectionReady, setConnectionReady] = useState(false);
@@ -149,16 +149,24 @@ export default function JoinRoomPage() {
           <span className="status-dot" />
           {roomLive ? "Ao vivo" : "Ainda não começou"}
         </div>
-        <select className="lang-select" value={effectiveLang} onChange={(e) => setLang(e.target.value)}>
-          {selectableLanguages.map((l) => (
-            <option key={l.code} value={l.code}>
-              {l.label}
-            </option>
-          ))}
-        </select>
-        <button className="button" onClick={enter} disabled={joining || !connectionReady}>
-          {joining ? "A entrar…" : "Entrar →"}
-        </button>
+        {selectableLanguages.length === 0 ? (
+          <p className="empty-state">Esta sessão já está em inglês — sem legendas para traduzir.</p>
+        ) : (
+          <>
+            {selectableLanguages.length > 1 && (
+              <select className="lang-select" value={effectiveLang} onChange={(e) => setLang(e.target.value)}>
+                {selectableLanguages.map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            )}
+            <button className="button" onClick={enter} disabled={joining || !connectionReady}>
+              {joining ? "A entrar…" : "Entrar →"}
+            </button>
+          </>
+        )}
         {error && <p className="error">{error}</p>}
       </div>
     );

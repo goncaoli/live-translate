@@ -130,10 +130,14 @@ export default function SpeakRoomPage() {
   async function start() {
     if (!speakerToken) return;
     setError(null);
+    const targetLanguages = getSelectableLanguages(sourceLanguage).map((l) => l.code);
+    if (targetLanguages.length === 0) {
+      setError("Sessão já em inglês — não há legendas para traduzir.");
+      return;
+    }
     setStarting(true);
     try {
       const { token, region } = await getSpeechToken(roomId, speakerToken);
-      const targetLanguages = getSelectableLanguages(sourceLanguage).map((l) => l.code);
       const recognizer = await startTranslation(token, region, sourceLanguage, targetLanguages, {
         onInterim: (original, translations) => {
           const now = Date.now();
