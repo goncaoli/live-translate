@@ -27,6 +27,7 @@ Portal de evento: uma agenda com salas e palestras onde cada participante ouve a
   - `HomePage` — a agenda: lista salas e palestras (hora, orador, nº de participantes, selo "AO VIVO" em tempo real).
   - `SpeakTalkPage` (`/talk/:talkId/speak`) — pede o PIN da palestra; depois de validado, mostra o QR (fixo, aponta para a página de entrada dessa palestra), começa/pára a tradução e mostra a transcrição.
   - `JoinTalkPage` (`/talk/:talkId/join`) — escolher idioma e ver as legendas em tempo real.
+  - `DisplayPage` (`/display/:roomId?lang=en`) — ecrã sem interação para um monitor/TV atrás do palco (ex. para a câmara filmar com legendas em rodapé): segue automaticamente a palestra que estiver "ao vivo" nessa sala e mostra a legenda grande num idioma fixo (`en` por omissão, muda-se com `?lang=`). Não conta para o nº de participantes. Usa: `https://<url>/display/tribuna-presidencial?lang=en`. Deixa o separador aberto o dia todo — como não há histórico de "quem está ao vivo agora" guardado no servidor, um refresh a meio de uma palestra só volta a mostrar legendas quando essa palestra acabar/começar de novo (ou a seguinte começar).
 - `api/` — Azure Functions (Node/TypeScript, programming model v4). Endpoints:
   - `GET /api/agenda` — devolve salas e palestras **sem os PINs** (os PINs só existem no servidor, nunca no bundle do cliente).
   - `POST /api/verifyPin` — valida `{ talkId, pin }`; se corresponder, devolve um token assinado (HMAC, `SPEAKER_TOKEN_SECRET`) válido por 12h para essa palestra.

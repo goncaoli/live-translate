@@ -488,3 +488,41 @@
   letter-spacing: 0.4em;
   text-align: center;
 }
+
+/* Unattended TV/monitor caption screen — no app chrome, full-bleed black,
+   big lower-third text sized relative to viewport so it scales across
+   monitor resolutions. */
+.display-page {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: #000;
+  overflow: hidden;
+}
+
+.display-speaker {
+  position: absolute;
+  left: 3vw;
+  bottom: calc(12vh + 1rem);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: clamp(0.9rem, 1.6vw, 1.5rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.display-caption-bar {
+  min-height: 12vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 4vw;
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  font-size: clamp(1.5rem, 3.2vw, 3.2rem);
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+}

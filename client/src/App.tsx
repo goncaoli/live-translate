@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import "./App.css";
 import HomePage from "./pages/HomePage";
 import JoinTalkPage from "./pages/JoinTalkPage";
+import DisplayPage from "./pages/DisplayPage";
 
 // Pulls in the Azure Speech SDK (~500kB) and qrcode.react — only the
 // speaker needs either, so keep them out of the initial bundle everyone
@@ -22,6 +23,7 @@ export default function App() {
         }
       />
       <Route path="/talk/:talkId/join" element={<JoinTalkPage />} />
+      <Route path="/display/:roomId" element={<DisplayPage />} />
     </Routes>
   );
 }
