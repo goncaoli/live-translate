@@ -59,8 +59,8 @@ export interface SpeechTokenResponse {
   region: string;
 }
 
-export async function getSpeechToken(talkId: string, speakerToken: string): Promise<SpeechTokenResponse> {
-  const res = await fetch(`${API_BASE}/speechToken?talkId=${encodeURIComponent(talkId)}`, {
+export async function getSpeechToken(roomId: string, speakerToken: string): Promise<SpeechTokenResponse> {
+  const res = await fetch(`${API_BASE}/speechToken?roomId=${encodeURIComponent(roomId)}`, {
     headers: { "X-Speaker-Token": speakerToken },
   });
   if (!res.ok) throw new Error(`speechToken failed: ${res.status} ${await res.text()}`);
@@ -83,7 +83,6 @@ export interface Talk {
   startsAt: string;
   endsAt: string;
   type?: TalkType;
-  sourceLanguage?: string;
 }
 
 export interface AgendaResponse {
@@ -97,21 +96,21 @@ export async function getAgenda(): Promise<AgendaResponse> {
   return res.json();
 }
 
-export async function verifyPin(talkId: string, pin: string): Promise<{ token: string }> {
-  return postJson("/verifyPin", { talkId, pin });
+export async function verifyPin(roomId: string, pin: string): Promise<{ token: string }> {
+  return postJson("/verifyPin", { roomId, pin });
 }
 
-export function talkStarted(talkId: string, speakerToken: string): Promise<void> {
-  return postJson("/talkStarted", { talkId }, speakerToken);
+export function roomStarted(roomId: string, speakerToken: string, sourceLanguage: string): Promise<void> {
+  return postJson("/roomStarted", { roomId, sourceLanguage }, speakerToken);
 }
 
-export function talkEnded(talkId: string, speakerToken: string): Promise<void> {
-  return postJson("/talkEnded", { talkId }, speakerToken);
+export function roomEnded(roomId: string, speakerToken: string): Promise<void> {
+  return postJson("/roomEnded", { roomId }, speakerToken);
 }
 
 // navigator.sendBeacon can't set custom headers, so the token travels in the
 // body — used as a best-effort signal when the speaker's tab closes.
-export function talkEndedBeacon(talkId: string, speakerToken: string): void {
-  const blob = new Blob([JSON.stringify({ talkId, token: speakerToken })], { type: "application/json" });
-  navigator.sendBeacon(`${API_BASE}/talkEnded`, blob);
+export function roomEndedBeacon(roomId: string, speakerToken: string): void {
+  const blob = new Blob([JSON.stringify({ roomId, token: speakerToken })], { type: "application/json" });
+  navigator.sendBeacon(`${API_BASE}/roomEnded`, blob);
 }

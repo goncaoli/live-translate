@@ -3,9 +3,9 @@ import axios from "axios";
 import { verifyToken } from "../lib/speakerToken";
 
 export async function speechToken(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
-  const talkId = request.query.get("talkId");
+  const roomId = request.query.get("roomId");
   const token = request.headers.get("x-speaker-token");
-  if (!talkId || !verifyToken(token, talkId)) {
+  if (!roomId || !verifyToken(token, roomId)) {
     return { status: 401, jsonBody: { error: "Token de orador inválido ou em falta" } };
   }
 

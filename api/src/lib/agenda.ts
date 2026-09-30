@@ -17,24 +17,20 @@ export interface Talk {
   startsAt: string;
   endsAt: string;
   type?: TalkType;
-  // BCP-47 locale the speaker actually talks in, e.g. "en-US" for an
-  // international speaker. Defaults to pt-PT (client/src/lib/languages.ts)
-  // when unset. Set this per-talk for any session not spoken in Portuguese —
-  // otherwise the recognizer listens for the wrong language.
-  sourceLanguage?: string;
-  pin: string;
 }
 
 // Edit this file to set up the real event. `id` must be unique across all
-// talks (it doubles as the SignalR session id and the URL slug). `pin` is
-// never sent to the client — see api/src/functions/agenda.ts.
+// talks (it's used as the URL slug for schedule display purposes — the
+// live translation session itself is keyed by roomId, not talk id).
 export const ROOMS: Room[] = [
   { id: "tribuna-presidencial", name: "Tribuna Presidencial" },
   { id: "sala-campeoes-europeus", name: "Sala Campeões Europeus" },
   { id: "sala-taca-latina", name: "Sala Taça Latina" },
 ];
 
-const EVENT_PIN = "1500180"; // código postal da empresa — partilhado por todas as palestras
+// Shared across every room's speak session. Never sent to the client — see
+// api/src/functions/agenda.ts and api/src/functions/verifyPin.ts.
+export const EVENT_PIN = "1500180"; // código postal da empresa
 const DAY = "2026-10-07";
 const at = (time: string) => `${DAY}T${time}:00+01:00`;
 
@@ -49,7 +45,6 @@ export const TALKS: Talk[] = [
     startsAt: at("09:00"),
     endsAt: at("09:15"),
     type: "host",
-    pin: EVENT_PIN,
   },
   {
     id: "ministro-adjunto-reforma-estado",
@@ -59,7 +54,6 @@ export const TALKS: Talk[] = [
     startsAt: at("09:15"),
     endsAt: at("09:45"),
     type: "keynote",
-    pin: EVENT_PIN,
   },
   {
     id: "joana-carrasqueira-google-deepmind",
@@ -70,7 +64,6 @@ export const TALKS: Talk[] = [
     startsAt: at("09:45"),
     endsAt: at("10:05"),
     type: "keynote",
-    pin: EVENT_PIN,
   },
   {
     id: "digital-core-supply-chain-aws",
@@ -81,7 +74,6 @@ export const TALKS: Talk[] = [
     startsAt: at("10:05"),
     endsAt: at("10:35"),
     type: "roundtable",
-    pin: EVENT_PIN,
   },
   {
     id: "coffee-break-demo",
@@ -91,7 +83,6 @@ export const TALKS: Talk[] = [
     startsAt: at("10:35"),
     endsAt: at("10:55"),
     type: "break",
-    pin: EVENT_PIN,
   },
   {
     id: "acceler8-roberta-medina",
@@ -102,7 +93,6 @@ export const TALKS: Talk[] = [
     startsAt: at("10:55"),
     endsAt: at("11:05"),
     type: "talk",
-    pin: EVENT_PIN,
   },
   {
     id: "agentic-breakpoint-microsoft",
@@ -113,7 +103,6 @@ export const TALKS: Talk[] = [
     startsAt: at("11:05"),
     endsAt: at("11:35"),
     type: "roundtable",
-    pin: EVENT_PIN,
   },
   {
     id: "acceler8-henrique-gouveia-melo",
@@ -124,7 +113,6 @@ export const TALKS: Talk[] = [
     startsAt: at("11:35"),
     endsAt: at("11:45"),
     type: "talk",
-    pin: EVENT_PIN,
   },
   {
     id: "data-ai-trust-google-cloud",
@@ -135,7 +123,6 @@ export const TALKS: Talk[] = [
     startsAt: at("11:45"),
     endsAt: at("12:15"),
     type: "roundtable",
-    pin: EVENT_PIN,
   },
   {
     id: "acceler8-tomas-appleton",
@@ -146,7 +133,6 @@ export const TALKS: Talk[] = [
     startsAt: at("12:15"),
     endsAt: at("12:25"),
     type: "talk",
-    pin: EVENT_PIN,
   },
   {
     id: "customer-360-salesforce",
@@ -157,7 +143,6 @@ export const TALKS: Talk[] = [
     startsAt: at("12:25"),
     endsAt: at("12:55"),
     type: "roundtable",
-    pin: EVENT_PIN,
   },
   {
     id: "keynote-tba",
@@ -167,7 +152,6 @@ export const TALKS: Talk[] = [
     startsAt: at("12:55"),
     endsAt: at("13:15"),
     type: "keynote",
-    pin: EVENT_PIN,
   },
 
   // Tarde — Breakout Sessions, 14:20–16:00, três salas em paralelo
@@ -180,7 +164,6 @@ export const TALKS: Talk[] = [
     startsAt: at("14:20"),
     endsAt: at("14:30"),
     type: "host",
-    pin: EVENT_PIN,
   },
 
   // Slot 14:40–15:00
@@ -191,7 +174,6 @@ export const TALKS: Talk[] = [
     speaker: "",
     startsAt: at("14:40"),
     endsAt: at("15:00"),
-    pin: EVENT_PIN,
   },
   {
     id: "breakout-aws-tbc-1",
@@ -200,7 +182,6 @@ export const TALKS: Talk[] = [
     speaker: "",
     startsAt: at("14:40"),
     endsAt: at("15:00"),
-    pin: EVENT_PIN,
   },
   {
     id: "democratizing-agentic-ai",
@@ -210,7 +191,6 @@ export const TALKS: Talk[] = [
     speakerRole: "Ensuring AI benefits everyone",
     startsAt: at("14:40"),
     endsAt: at("15:00"),
-    pin: EVENT_PIN,
   },
 
   // Slot 15:10–15:30
@@ -222,7 +202,6 @@ export const TALKS: Talk[] = [
     speakerRole: "From single agents to coordinated fleets — Powered by IBM",
     startsAt: at("15:10"),
     endsAt: at("15:30"),
-    pin: EVENT_PIN,
   },
   {
     id: "healthcare-agentic-ai-portugal",
@@ -232,7 +211,6 @@ export const TALKS: Talk[] = [
     speakerRole: "Powered by Google Cloud",
     startsAt: at("15:10"),
     endsAt: at("15:30"),
-    pin: EVENT_PIN,
   },
   {
     id: "ai-sovereignty-cybersecurity",
@@ -242,7 +220,6 @@ export const TALKS: Talk[] = [
     speakerRole: "Digital sovereignty as a strategic choice",
     startsAt: at("15:10"),
     endsAt: at("15:30"),
-    pin: EVENT_PIN,
   },
 
   // Slot 15:40–16:00
@@ -254,7 +231,6 @@ export const TALKS: Talk[] = [
     speakerRole: "Powered by ServiceNow",
     startsAt: at("15:40"),
     endsAt: at("16:00"),
-    pin: EVENT_PIN,
   },
   {
     id: "breakout-microsoft-tbc",
@@ -263,7 +239,6 @@ export const TALKS: Talk[] = [
     speaker: "",
     startsAt: at("15:40"),
     endsAt: at("16:00"),
-    pin: EVENT_PIN,
   },
   {
     id: "agentic-ai-sentinel",
@@ -272,10 +247,9 @@ export const TALKS: Talk[] = [
     speaker: "",
     startsAt: at("15:40"),
     endsAt: at("16:00"),
-    pin: EVENT_PIN,
   },
 ];
 
-export function findTalk(talkId: string): Talk | undefined {
-  return TALKS.find((t) => t.id === talkId);
+export function findRoom(roomId: string): Room | undefined {
+  return ROOMS.find((r) => r.id === roomId);
 }

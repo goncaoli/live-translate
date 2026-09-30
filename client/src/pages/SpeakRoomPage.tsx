@@ -4,21 +4,21 @@ import { QRCodeSVG } from "qrcode.react";
 import type { HubConnection } from "@microsoft/signalr";
 import type { TranslationRecognizer } from "microsoft-cognitiveservices-speech-sdk";
 import { joinUrl } from "../lib/session";
-import { PRESENCE_LANG, SOURCE_LANGUAGE, getSelectableLanguages } from "../lib/languages";
+import { PRESENCE_LANG, SOURCE_LANGUAGE, SOURCE_LANGUAGE_OPTIONS, getSelectableLanguages } from "../lib/languages";
 import {
   getAgenda,
   getSpeechToken,
   broadcast,
   joinGroup,
   verifyPin,
-  talkStarted,
-  talkEnded,
-  talkEndedBeacon,
-  type Talk,
+  roomStarted,
+  roomEnded,
+  roomEndedBeacon,
+  type AgendaResponse,
 } from "../lib/api";
 import { connect } from "../lib/signalr";
 import { startTranslation, stopTranslation } from "../lib/speech";
-import { formatByline } from "../lib/countdown";
+import { findCurrentTalk } from "../lib/countdown";
 
 // Caps how often partial (not-yet-final) translations go out while the
 // speaker is mid-sentence — keeps captions feeling live without flooding
@@ -33,14 +33,16 @@ function friendlyError(err: unknown): string {
   return "Algo correu mal. Tenta novamente.";
 }
 
-export default function SpeakTalkPage() {
-  const { talkId = "" } = useParams();
-  const [talk, setTalk] = useState<Talk | null>(null);
+export default function SpeakRoomPage() {
+  const { roomId = "" } = useParams();
+  const [agenda, setAgenda] = useState<AgendaResponse | null>(null);
+  const [now, setNow] = useState(() => new Date());
   const [pin, setPin] = useState("");
   const [speakerToken, setSpeakerToken] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [pinError, setPinError] = useState<string | null>(null);
 
+  const [sourceLanguage, setSourceLanguage] = useState(SOURCE_LANGUAGE);
   const [listening, setListening] = useState(false);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,21 +54,29 @@ export default function SpeakTalkPage() {
   const listeningRef = useRef(false);
   const lastInterimSentRef = useRef(0);
 
+  const room = agenda?.rooms.find((r) => r.id === roomId);
+  const currentTalk = agenda ? findCurrentTalk(agenda.talks, roomId, now) : undefined;
+
   useEffect(() => {
     getAgenda()
-      .then((agenda) => setTalk(agenda.talks.find((t) => t.id === talkId) ?? null))
+      .then(setAgenda)
       .catch(() => {});
-  }, [talkId]);
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     function handlePageHide() {
       if (listeningRef.current && speakerToken) {
-        talkEndedBeacon(talkId, speakerToken);
+        roomEndedBeacon(roomId, speakerToken);
       }
     }
     window.addEventListener("pagehide", handlePageHide);
     return () => window.removeEventListener("pagehide", handlePageHide);
-  }, [talkId, speakerToken]);
+  }, [roomId, speakerToken]);
 
   useEffect(() => {
     if (!speakerToken) return;
@@ -74,8 +84,8 @@ export default function SpeakTalkPage() {
 
     async function trackPresence() {
       try {
-        const connection = await connect(talkId, (connectionId) => {
-          joinGroup(connectionId, talkId, PRESENCE_LANG).catch(() => {});
+        const connection = await connect(roomId, (connectionId) => {
+          joinGroup(connectionId, roomId, PRESENCE_LANG).catch(() => {});
         });
         if (cancelled) {
           connection.stop();
@@ -83,7 +93,7 @@ export default function SpeakTalkPage() {
         }
         connection.on("participantJoined", () => setParticipants((n) => n + 1));
         connection.on("participantLeft", () => setParticipants((n) => Math.max(0, n - 1)));
-        await joinGroup(connection.connectionId ?? "", talkId, PRESENCE_LANG);
+        await joinGroup(connection.connectionId ?? "", roomId, PRESENCE_LANG);
         presenceConnectionRef.current = connection;
       } catch {
         // Presence is a nice-to-have; a failure here shouldn't block the session.
@@ -96,7 +106,7 @@ export default function SpeakTalkPage() {
       cancelled = true;
       presenceConnectionRef.current?.stop();
     };
-  }, [talkId, speakerToken]);
+  }, [roomId, speakerToken]);
 
   useEffect(() => {
     return () => {
@@ -108,7 +118,7 @@ export default function SpeakTalkPage() {
     setPinError(null);
     setVerifying(true);
     try {
-      const { token } = await verifyPin(talkId, pin);
+      const { token } = await verifyPin(roomId, pin);
       setSpeakerToken(token);
     } catch {
       setPinError("PIN inválido.");
@@ -122,27 +132,26 @@ export default function SpeakTalkPage() {
     setError(null);
     setStarting(true);
     try {
-      const { token, region } = await getSpeechToken(talkId, speakerToken);
-      const sourceLanguage = talk?.sourceLanguage ?? SOURCE_LANGUAGE;
+      const { token, region } = await getSpeechToken(roomId, speakerToken);
       const targetLanguages = getSelectableLanguages(sourceLanguage).map((l) => l.code);
       const recognizer = await startTranslation(token, region, sourceLanguage, targetLanguages, {
         onInterim: (original, translations) => {
           const now = Date.now();
           if (now - lastInterimSentRef.current < INTERIM_BROADCAST_INTERVAL_MS) return;
           lastInterimSentRef.current = now;
-          broadcast(talkId, original, translations, speakerToken, false).catch(() => {});
+          broadcast(roomId, original, translations, speakerToken, false).catch(() => {});
         },
         onFinal: (original, translations) => {
           lastInterimSentRef.current = Date.now();
           setTranscript((prev) => [original, ...prev].slice(0, 20));
-          broadcast(talkId, original, translations, speakerToken, true).catch((err) => setError(friendlyError(err)));
+          broadcast(roomId, original, translations, speakerToken, true).catch((err) => setError(friendlyError(err)));
         },
         onError: (details) => setError(friendlyError(new Error(details))),
       });
       recognizerRef.current = recognizer;
       setListening(true);
       listeningRef.current = true;
-      talkStarted(talkId, speakerToken).catch(() => {});
+      roomStarted(roomId, speakerToken, sourceLanguage).catch(() => {});
     } catch (err) {
       setError(friendlyError(err));
     } finally {
@@ -157,11 +166,11 @@ export default function SpeakTalkPage() {
     }
     setListening(false);
     listeningRef.current = false;
-    if (speakerToken) talkEnded(talkId, speakerToken).catch(() => {});
+    if (speakerToken) roomEnded(roomId, speakerToken).catch(() => {});
   }
 
   async function copyLink() {
-    await navigator.clipboard.writeText(joinUrl(talkId));
+    await navigator.clipboard.writeText(joinUrl(roomId));
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -170,8 +179,8 @@ export default function SpeakTalkPage() {
     return (
       <div className="page">
         <span className="eyebrow">Acesso de orador</span>
-        <h1>{talk?.title ?? talkId}</h1>
-        {talk && <p className="subtitle">{formatByline(talk.speaker, talk.speakerRole)}</p>}
+        <h1>{room?.name ?? roomId}</h1>
+        {currentTalk && <p className="subtitle">Agora: {currentTalk.title}</p>}
         <input
           className="pin-input"
           type="password"
@@ -191,17 +200,30 @@ export default function SpeakTalkPage() {
 
   return (
     <div className="page">
-      <span className="eyebrow">{talk ? formatByline(talk.speaker, talk.speakerRole) : ""}</span>
-      <h1>{talk?.title ?? talkId}</h1>
+      <span className="eyebrow">{currentTalk ? `Agora: ${currentTalk.title}` : ""}</span>
+      <h1>{room?.name ?? roomId}</h1>
 
       <div className={`status-badge ${listening ? "is-live" : ""}`}>
         <span className="status-dot" />
         {listening ? "A ouvir" : "Parado"}
       </div>
 
+      <select
+        className="lang-select"
+        value={sourceLanguage}
+        onChange={(e) => setSourceLanguage(e.target.value)}
+        disabled={listening}
+      >
+        {SOURCE_LANGUAGE_OPTIONS.map((l) => (
+          <option key={l.code} value={l.code}>
+            A falar em {l.label}
+          </option>
+        ))}
+      </select>
+
       <div className="card">
         <div className="qr-frame">
-          <QRCodeSVG value={joinUrl(talkId)} size={200} />
+          <QRCodeSVG value={joinUrl(roomId)} size={200} />
         </div>
         <div className="session-code">
           <button className="copy-button" onClick={copyLink}>

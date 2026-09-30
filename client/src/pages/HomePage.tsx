@@ -16,13 +16,13 @@ import {
   type Period,
 } from "../lib/countdown";
 
-interface TalkStatusPayload {
-  talkId: string;
+interface RoomStatusPayload {
+  roomId: string;
   live: boolean;
 }
 
 interface ParticipantPayload {
-  talkId: string;
+  roomId: string;
 }
 
 function groupByPeriod(talks: Talk[]): Map<Period, Talk[]> {
@@ -44,7 +44,7 @@ const PERIOD_ORDER: Period[] = ["morning", "afternoon", "evening"];
 export default function HomePage() {
   const [agenda, setAgenda] = useState<AgendaResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [liveTalks, setLiveTalks] = useState<Set<string>>(new Set());
+  const [liveRooms, setLiveRooms] = useState<Set<string>>(new Set());
   const [participants, setParticipants] = useState<Record<string, number>>({});
   const [now, setNow] = useState(() => new Date());
   const [collapsed, setCollapsed] = useState<Set<Period>>(new Set());
@@ -74,19 +74,19 @@ export default function HomePage() {
           connection.stop();
           return;
         }
-        connection.on("talkStatusChanged", ({ talkId, live }: TalkStatusPayload) => {
-          setLiveTalks((prev) => {
+        connection.on("roomStatusChanged", ({ roomId, live }: RoomStatusPayload) => {
+          setLiveRooms((prev) => {
             const next = new Set(prev);
-            if (live) next.add(talkId);
-            else next.delete(talkId);
+            if (live) next.add(roomId);
+            else next.delete(roomId);
             return next;
           });
         });
-        connection.on("participantJoined", ({ talkId }: ParticipantPayload) => {
-          setParticipants((prev) => ({ ...prev, [talkId]: (prev[talkId] ?? 0) + 1 }));
+        connection.on("participantJoined", ({ roomId }: ParticipantPayload) => {
+          setParticipants((prev) => ({ ...prev, [roomId]: (prev[roomId] ?? 0) + 1 }));
         });
-        connection.on("participantLeft", ({ talkId }: ParticipantPayload) => {
-          setParticipants((prev) => ({ ...prev, [talkId]: Math.max(0, (prev[talkId] ?? 0) - 1) }));
+        connection.on("participantLeft", ({ roomId }: ParticipantPayload) => {
+          setParticipants((prev) => ({ ...prev, [roomId]: Math.max(0, (prev[roomId] ?? 0) - 1) }));
         });
         await joinGroup(connection.connectionId ?? "", "agenda", "live");
         connectionRef.current = connection;
@@ -131,11 +131,42 @@ export default function HomePage() {
         <div className="hero-orb" aria-hidden="true" />
         <span className="eyebrow">Bem-vindo a</span>
         <h1>Live Translate</h1>
-        <p className="subtitle">Escolhe uma palestra para ouvir a tradução em tempo real no teu telemóvel.</p>
+        <p className="subtitle">Escolhe a sala para ouvir a tradução em tempo real no teu telemóvel.</p>
       </div>
 
       {error && <p className="error">{error}</p>}
       {!agenda && !error && <p className="empty-state">A carregar agenda…</p>}
+
+      {agenda && (
+        <div className="room-cards">
+          {agenda.rooms.map((room) => {
+            const live = liveRooms.has(room.id);
+            const count = participants[room.id] ?? 0;
+            return (
+              <div key={room.id} className="room-card">
+                <h2>{room.name}</h2>
+                <div className={`status-badge ${live ? "is-live" : ""}`}>
+                  <span className="status-dot" />
+                  {live ? "Ao vivo" : "Ainda não começou"}
+                </div>
+                {count > 0 && (
+                  <p className="subtitle">
+                    {count} participante{count === 1 ? "" : "s"}
+                  </p>
+                )}
+                <div className="talk-actions">
+                  <Link className="button" to={`/room/${room.id}/join`}>
+                    Entrar <span aria-hidden="true">→</span>
+                  </Link>
+                  <Link className="button button-outline" to={`/room/${room.id}/speak`}>
+                    Sou orador
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {periods.map(({ period, talks }) => {
         const rooms = [...new Set(talks.map((t) => t.roomId))];
@@ -188,8 +219,6 @@ export default function HomePage() {
 
                 <ul className="timeline-list">
                   {visibleTalks.map((talk) => {
-                    const live = liveTalks.has(talk.id);
-                    const count = participants[talk.id] ?? 0;
                     const phase = getPhase(talk.startsAt, talk.endsAt, now);
 
                     return (
@@ -202,12 +231,7 @@ export default function HomePage() {
                         <div className="timeline-body">
                           <div className="timeline-header">
                             {talk.type && <span className={`tag tag-${talk.type}`}>{TAG_LABELS[talk.type]}</span>}
-                            {live ? (
-                              <span className="status-badge is-live">
-                                <span className="status-dot" />
-                                Ao vivo
-                              </span>
-                            ) : phase === "upcoming" ? (
+                            {phase === "upcoming" ? (
                               <span className="status-badge">{formatCountdown(talk.startsAt, now)}</span>
                             ) : phase === "ongoing" ? (
                               <span className="status-badge">A decorrer</span>
@@ -218,21 +242,6 @@ export default function HomePage() {
                           <h3 className="timeline-title">{talk.title}</h3>
                           {(talk.speaker || talk.speakerRole) && (
                             <p className="timeline-meta">{formatByline(talk.speaker, talk.speakerRole)}</p>
-                          )}
-                          {count > 0 && (
-                            <p className="subtitle">
-                              {count} participante{count === 1 ? "" : "s"}
-                            </p>
-                          )}
-                          {talk.type !== "break" && (
-                            <div className="talk-actions">
-                              <Link className="button" to={`/talk/${talk.id}/join`}>
-                                Entrar <span aria-hidden="true">→</span>
-                              </Link>
-                              <Link className="button button-outline" to={`/talk/${talk.id}/speak`}>
-                                Sou orador
-                              </Link>
-                            </div>
                           )}
                         </div>
                       </li>

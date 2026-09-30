@@ -1,12 +1,12 @@
 # Live Translate
 
-Portal de evento: uma agenda com salas e palestras onde cada participante ouve a tradução em tempo real no próprio telemóvel, via QR Code, em vez de num ecrã partilhado.
+Portal de evento: cada **sala** tem uma sessão de tradução contínua ao longo do dia (não por palestra individual) — quem trata do som liga uma vez, e os participantes entram uma vez e ficam a ouvir tudo o que acontece nessa sala, sem terem de voltar a fazer scan a cada palestra nova.
 
 ```
-📋 Agenda (salas → palestras)
+📋 Agenda (3 salas)
         │
-        ├── PIN da palestra ──▶ 🎤 Orador fala (pt-PT)
-        │                              │
+        ├── PIN partilhado ──▶ 🎤 Orador/operador liga uma vez por sala
+        │                              │  (escolhe pt-PT ou en-US)
         │                              ▼
         │                    Azure AI Speech (Speech Translation, streaming)
         │                              │
@@ -17,47 +17,61 @@ Portal de evento: uma agenda com salas e palestras onde cada participante ouve a
                                                               │
                                     ┌─────────────────────────┼─────────────────────────┐
                                     ▼                         ▼                         ▼
-                              📱 Pessoa A                📱 Pessoa B                📱 Pessoa C
-                              (EN, via QR)              (ES, via QR)              (FR, via QR)
+                              📱 Participante A         📺 TV do palco            🌐 Site do evento
+                              (via QR, agenda)          (/display/:roomId)        (mesma URL em <iframe>)
 ```
 
 ## Estrutura
 
 - `client/` — React + Vite + TypeScript.
-  - `HomePage` — a agenda: lista salas e palestras (hora, orador, nº de participantes, selo "AO VIVO" em tempo real).
-  - `SpeakTalkPage` (`/talk/:talkId/speak`) — pede o PIN da palestra; depois de validado, mostra o QR (fixo, aponta para a página de entrada dessa palestra), começa/pára a tradução e mostra a transcrição.
-  - `JoinTalkPage` (`/talk/:talkId/join`) — escolher idioma e ver as legendas em tempo real.
-  - `DisplayPage` (`/display/:roomId?lang=en`) — ecrã sem interação para um monitor/TV atrás do palco (ex. para a câmara filmar com legendas em rodapé): segue automaticamente a palestra que estiver "ao vivo" nessa sala e mostra a legenda grande num idioma fixo (`en` por omissão, muda-se com `?lang=`). Não conta para o nº de participantes. Usa: `https://<url>/display/tribuna-presidencial?lang=en`. Deixa o separador aberto o dia todo — como não há histórico de "quem está ao vivo agora" guardado no servidor, um refresh a meio de uma palestra só volta a mostrar legendas quando essa palestra acabar/começar de novo (ou a seguinte começar).
+  - `HomePage` — a agenda: um cartão por sala (selo "AO VIVO", nº de participantes, "Entrar"/"Sou orador") no topo, e por baixo a tabela de horários por período (Manhã/Tarde) só para consulta — sem ações por palestra individual.
+  - `SpeakRoomPage` (`/room/:roomId/speak`) — pede o PIN da sala; depois de validado, escolhe-se o idioma em que se vai falar (pt-PT ou en-US — a Azure não deixa trocar a meio de uma sessão a correr, por isso é uma escolha manual antes de "Começar a falar", que se pode mudar entre palestras parando e recomeçando), mostra o QR (fixo, aponta para a entrada dessa sala), começa/pára a tradução e mostra a transcrição.
+  - `JoinRoomPage` (`/room/:roomId/join`) — escolher idioma e ver as legendas em tempo real; a lista de idiomas exclui automaticamente o idioma em que se está a falar, assim que souber qual é.
+  - `DisplayPage` (`/display/:roomId?lang=en&embed=1`) — ecrã sem interação, para um monitor/TV atrás do palco (com legendas em rodapé, a câmara filma o monitor) **e** para embutir no site do evento via `<iframe>` (com `?embed=1`, fundo transparente, preenche o contentor em vez do ecrã inteiro). Liga direto à sessão da sala pedida — não depende de nenhuma palestra estar marcada como "ao vivo" na agenda. Deixa o separador aberto o dia todo.
 - `api/` — Azure Functions (Node/TypeScript, programming model v4). Endpoints:
-  - `GET /api/agenda` — devolve salas e palestras **sem os PINs** (os PINs só existem no servidor, nunca no bundle do cliente).
-  - `POST /api/verifyPin` — valida `{ talkId, pin }`; se corresponder, devolve um token assinado (HMAC, `SPEAKER_TOKEN_SECRET`) válido por 12h para essa palestra.
+  - `GET /api/agenda` — devolve salas e palestras (a agenda é só informativa; a sessão de tradução em si não depende dela).
+  - `POST /api/verifyPin` — valida `{ roomId, pin }` contra o PIN partilhado do evento; se corresponder, devolve um token assinado (HMAC, `SPEAKER_TOKEN_SECRET`) válido por 12h para essa sala.
   - `POST /api/negotiate` — credenciais de ligação ao Azure SignalR Service.
-  - `POST /api/joinGroup` — junta uma ligação SignalR ao grupo `talkId:lang`.
-  - `POST /api/broadcast` *(exige `X-Speaker-Token`)* — texto original + traduções por idioma, envia para cada grupo `talkId:lang`.
-  - `POST /api/talkStarted` / `POST /api/talkEnded` *(exigem `X-Speaker-Token`)* — publicam o estado "ao vivo" no grupo `agenda:live`, que a agenda escuta para atualizar o selo em tempo real.
-  - `POST /api/presence` / `POST /api/leave` — avisam `talkId:presence` (contador na página do orador) e `agenda:live` (contador na agenda) quando alguém entra/sai.
-  - `GET /api/speechToken?talkId=...` *(exige `X-Speaker-Token`)* — emite um token temporário do Azure AI Speech.
-- `api/src/lib/agenda.ts` — **fonte única da agenda** (salas, palestras, PINs). Edita este ficheiro para pores o evento real.
+  - `POST /api/joinGroup` — junta uma ligação SignalR ao grupo `roomId:lang`.
+  - `POST /api/broadcast` *(exige `X-Speaker-Token`)* — texto original + traduções por idioma, envia para cada grupo `roomId:lang`.
+  - `POST /api/roomStarted` / `POST /api/roomEnded` *(exigem `X-Speaker-Token`)* — publicam o estado "ao vivo" (e o idioma escolhido) no grupo `agenda:live`, que a agenda e o `JoinRoomPage` escutam.
+  - `POST /api/presence` / `POST /api/leave` — avisam `roomId:presence` (contador na página do orador) e `agenda:live` (contador na agenda) quando alguém entra/sai.
+  - `GET /api/speechToken?roomId=...` *(exige `X-Speaker-Token`)* — emite um token temporário do Azure AI Speech.
+- `api/src/lib/agenda.ts` — **fonte única da agenda** (salas, palestras, horários, PIN partilhado). Edita este ficheiro para pores o evento real.
 - `client/public/staticwebapp.config.json` — configuração do Azure Static Web Apps (SPA fallback). Tem de estar dentro de `client/`, não na raiz.
 
-`talk.id` (definido em `agenda.ts`) é o identificador usado em todo o lado — grupos do SignalR e URLs (`/talk/<id>/join`, `/talk/<id>/speak`). Como é estável, os QR codes de cada palestra podem ser gerados e impressos com antecedência, antes do evento começar.
+`room.id` é o identificador usado em todo o lado — grupos do SignalR, tokens, e URLs (`/room/<id>/join`, `/room/<id>/speak`, `/display/<id>`). Como é estável (só há 3 salas, não mudam), os QR codes e os links de `/display` podem ser preparados e impressos com antecedência.
 
-## Editar a agenda (salas, palestras, PINs, horários)
+## Editar a agenda (salas, palestras, horários)
 
-Abre `api/src/lib/agenda.ts` e edita os arrays `ROOMS` e `TALKS`. Cada `id` de palestra tem de ser único em todo o ficheiro. `startsAt`/`endsAt` são ISO 8601 com offset explícito (ex. `2026-10-07T10:00:00+01:00`) — usados para a contagem decrescente e o intervalo de horas mostrados na agenda. O PIN pode ser o que quiseres (atualmente é o mesmo para todas as palestras — o código postal da empresa). Depois de editar, faz commit e push — o deploy é automático.
+Abre `api/src/lib/agenda.ts` e edita os arrays `ROOMS` e `TALKS`. `startsAt`/`endsAt` são ISO 8601 com offset explícito (ex. `2026-10-07T10:00:00+01:00`) — usados para a contagem decrescente e o "agora: `<título>`" mostrado nas páginas de sala (informativo — não controla a sessão de tradução em si, que corre independentemente da agenda). `EVENT_PIN` é o PIN partilhado por todas as salas. Depois de editar, faz commit e push — o deploy é automático.
 
-## Como funciona a autorização do orador
+## Como funciona a autorização do orador/operador
 
 Um PIN sozinho não chega numa SPA estática — qualquer pessoa consegue ver o código-fonte JS. Por isso:
 
 1. `POST /api/verifyPin` corre no servidor e compara o PIN com `timingSafeEqual` (evita timing attacks).
-2. Se corresponder, devolve um **token assinado** (`talkId.expiry.hmac`, segredo em `SPEAKER_TOKEN_SECRET`).
-3. Esse token tem de ir no header `X-Speaker-Token` em qualquer pedido que "fale" nessa palestra (`broadcast`, `speechToken`, `talkStarted`, `talkEnded`) — a API valida a assinatura e o `talkId` antes de aceitar.
+2. Se corresponder, devolve um **token assinado** (`roomId.expiry.hmac`, segredo em `SPEAKER_TOKEN_SECRET`).
+3. Esse token tem de ir no header `X-Speaker-Token` em qualquer pedido que "fale" nessa sala (`broadcast`, `speechToken`, `roomStarted`, `roomEnded`) — a API valida a assinatura e o `roomId` antes de aceitar.
+
+## Embutir as legendas no site do evento
+
+`https://<url>/display/<roomId>?lang=en&embed=1` num `<iframe>`:
+
+```html
+<iframe
+  src="https://<url>/display/tribuna-presidencial?lang=en&embed=1"
+  style="width:100%; height:100px; border:0;"
+  title="Legendas ao vivo"
+></iframe>
+```
+
+Uma por sala (`tribuna-presidencial`, `sala-campeoes-europeus`, `sala-taca-latina`). Sem `embed=1` (ex. só `?lang=en`), a mesma página serve para um monitor/TV dedicado, a ocupar o ecrã inteiro.
 
 ## Recursos Azure necessários
 
 1. **Azure AI Speech** (Speech Service) — precisas da chave e da região.
-2. **Azure SignalR Service** — cria um recurso em modo **Serverless** (obrigatório para os bindings do Azure Functions). Copia a *Connection String*. O tier **Free (F1)** chega para testar (20 ligações simultâneas, 20k mensagens/dia).
+2. **Azure SignalR Service** — cria um recurso em modo **Serverless** (obrigatório para os bindings do Azure Functions). Copia a *Connection String*. O tier **Free (F1)** chega para testar (20 ligações simultâneas, 20k mensagens/dia) — para o evento real, considera o tier **Standard** se esperares mais gente ligada ao mesmo tempo do que isso.
 3. **Azure Static Web Apps** — liga o repositório GitHub e aponta:
    - App location: `client`
    - Api location: `api`
@@ -114,11 +128,12 @@ Neste modo define `VITE_API_BASE=http://localhost:7071/api` num `.env.local` den
 
 ## Notas de segurança
 
-- A chave do Azure AI Speech nunca é enviada ao browser — o cliente pede um token temporário a `/api/speechToken`, válido por poucos minutos, e só depois de provar (via `X-Speaker-Token`) que sabe o PIN da palestra.
-- A agenda pública (`GET /api/agenda`) nunca inclui os PINs — só a versão server-side em `api/src/lib/agenda.ts` os tem.
+- A chave do Azure AI Speech nunca é enviada ao browser — o cliente pede um token temporário a `/api/speechToken`, válido por poucos minutos, e só depois de provar (via `X-Speaker-Token`) que sabe o PIN da sala.
+- A agenda pública (`GET /api/agenda`) não inclui o PIN — só a versão server-side em `api/src/lib/agenda.ts` o tem.
 
 ## Limitações conhecidas / próximos passos
 
 - A agenda é um ficheiro estático no código (`api/src/lib/agenda.ts`) — editar requer um novo deploy. Para editar sem tocar em código, o próximo passo seria mover isto para uma tabela (Azure Table Storage).
 - Os idiomas suportados estão fixos em `client/src/lib/languages.ts` — adicionar um idioma-alvo aumenta o custo/latência do Azure Speech Translation (cada idioma extra é uma stream adicional).
+- Trocar o idioma de origem (pt-PT ↔ en-US) a meio do dia exige parar e recomeçar a sessão da sala — a Azure Speech não suporta trocar isto com a sessão a correr. Normal ter isso em conta se, por exemplo, um orador internacional falar entre dois portugueses na mesma sala.
 - O selo "AO VIVO" e o contador de participantes dependem de sinais explícitos (carregar em "Parar"/sair da página, ou fechar o separador normalmente, capturado via `navigator.sendBeacon`). Uma quebra de rede abrupta (wifi cai, bateria acaba) não é detetada — o contador só corrige quando a pessoa volta a entrar ou sai normalmente. Resolver isto por completo exigiria configurar *Upstream webhooks* no recurso SignalR para reagir a desligações reais.

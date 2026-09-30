@@ -1,4 +1,13 @@
+import type { Talk } from "./api";
+
 export type TalkPhase = "upcoming" | "ongoing" | "ended";
+
+// Purely informational — which talk is *scheduled* for this room right now,
+// by wall-clock time. Sessions are per-room, not per-talk, so this doesn't
+// reflect whether anyone is actually speaking.
+export function findCurrentTalk(talks: Talk[], roomId: string, now: Date): Talk | undefined {
+  return talks.find((t) => t.roomId === roomId && getPhase(t.startsAt, t.endsAt, now) === "ongoing");
+}
 
 export function getPhase(startsAt: string, endsAt: string, now: Date): TalkPhase {
   const start = new Date(startsAt).getTime();

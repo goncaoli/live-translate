@@ -30,7 +30,7 @@ export async function leave(request: HttpRequest, context: InvocationContext): P
     {
       groupName: groupName("agenda", "live"),
       target: "participantLeft",
-      arguments: [{ talkId: body.sessionId }],
+      arguments: [{ roomId: body.sessionId }],
     },
   ]);
 

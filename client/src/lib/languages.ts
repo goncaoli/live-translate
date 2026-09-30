@@ -17,6 +17,14 @@ export const SUPPORTED_LANGUAGES: LanguageOption[] = [
 
 export const SOURCE_LANGUAGE = "pt-PT";
 
+// The room operator picks one of these before starting — Azure Speech can't
+// switch source language mid-session, so this is a manual choice made once
+// per "Começar a falar", not per talk.
+export const SOURCE_LANGUAGE_OPTIONS: LanguageOption[] = [
+  { code: "pt-PT", label: "Português" },
+  { code: "en-US", label: "English" },
+];
+
 // Matches the group suffix the API uses for presence pings (api/src/functions/presence.ts).
 export const PRESENCE_LANG = "presence";
 
