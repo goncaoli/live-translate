@@ -26,6 +26,10 @@ export default function DisplayPage() {
   const { roomId = DEFAULT_ROOM } = useParams();
   const [searchParams] = useSearchParams();
   const lang = searchParams.get("lang") ?? "en";
+  // ?embed=1 — for <iframe>-ing this into another site (e.g. the event's own
+  // page): fills its container instead of taking over the viewport, and
+  // drops the speaker-name overlay to keep it a plain caption strip.
+  const isEmbed = searchParams.get("embed") === "1";
 
   const [agenda, setAgenda] = useState<AgendaResponse | null>(null);
   const [liveTalks, setLiveTalks] = useState<Set<string>>(new Set());
@@ -98,8 +102,8 @@ export default function DisplayPage() {
   const currentTalk = agenda?.talks.find((t) => t.roomId === roomId && liveTalks.has(t.id));
 
   return (
-    <div className="display-page">
-      {currentTalk && <div className="display-speaker">{currentTalk.speaker || currentTalk.title}</div>}
+    <div className={`display-page ${isEmbed ? "display-embed" : ""}`}>
+      {!isEmbed && currentTalk && <div className="display-speaker">{currentTalk.speaker || currentTalk.title}</div>}
       <div className="display-caption-bar">{caption?.text}</div>
     </div>
   );
