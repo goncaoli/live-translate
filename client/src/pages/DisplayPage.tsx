@@ -23,6 +23,15 @@ const DEFAULT_ROOM = "tribuna-presidencial";
 // frozen on the TV/site indefinitely.
 const STALE_CAPTION_MS = 10000;
 
+// Lets the embedding page (e.g. the event's own site) read caption data
+// structurally instead of only seeing the rendered text — e.g. to build its
+// own scrollback/history UI. Posted to the parent window regardless of
+// `embed`; harmless no-op when this page isn't actually inside an iframe.
+function postToParent(message: Record<string, unknown>) {
+  if (window.parent === window) return;
+  window.parent.postMessage({ source: "live-translate", ...message }, "*");
+}
+
 // Unattended TV/monitor view: no picker, no buttons. The translation session
 // is per-room, so this just joins that room's caption feed directly — no
 // need to guess which talk happens to be live. Meant to stay open in a
@@ -58,7 +67,10 @@ export default function DisplayPage() {
 
     function scheduleStaleClear() {
       clearTimeout(staleTimer);
-      staleTimer = setTimeout(() => setCaption(null), STALE_CAPTION_MS);
+      staleTimer = setTimeout(() => {
+        setCaption(null);
+        postToParent({ type: "clear", roomId });
+      }, STALE_CAPTION_MS);
     }
 
     async function joinGroups(connectionId: string) {
@@ -80,8 +92,10 @@ export default function DisplayPage() {
         connection.on("translation", (payload: Caption) => {
           setCaption(payload);
           scheduleStaleClear();
+          postToParent({ type: "caption", roomId, lang, ...payload, ts: Date.now() });
         });
         connection.on("roomStatusChanged", ({ roomId: changedRoom, live }: RoomStatusPayload) => {
+          postToParent({ type: "status", roomId: changedRoom, live });
           if (changedRoom === roomId && !live) {
             clearTimeout(staleTimer);
             setCaption(null);
