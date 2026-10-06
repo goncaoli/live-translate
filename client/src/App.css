@@ -544,8 +544,15 @@
 .display-caption-bar {
   min-height: 12vh;
   padding: 1.5rem 4vw;
-  background: rgba(0, 0, 0, 0.82);
+  background: transparent;
   color: #fff;
+  /* No background box behind the text (needed for compositing over live
+     camera footage in vision-mixer software like Livestream Studio/OBS) —
+     a layered text-shadow keeps it readable over any footage instead. */
+  text-shadow:
+    0 0 10px rgba(0, 0, 0, 0.9),
+    0 0 4px rgba(0, 0, 0, 0.9),
+    0 2px 4px rgba(0, 0, 0, 0.9);
   font-size: clamp(1.5rem, 3.2vw, 3.2rem);
   font-weight: 700;
   line-height: 1.3;
