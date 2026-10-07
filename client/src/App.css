@@ -594,6 +594,12 @@
      needs overflow:hidden too, or max-height alone doesn't clip anything. */
   max-height: 2.6em;
   overflow: hidden;
+  /* Anchor to the bottom instead of the base rule's center: with a hard cap,
+     centering splits the clip evenly top AND bottom, so a 3-line sentence
+     shows two half-cut lines and one whole one. Bottom-anchoring always
+     shows the 2 most recent lines in full and drops the oldest entirely —
+     reads naturally, like any live caption/subtitle track. */
+  align-items: flex-end;
   padding: 0.5rem 3vw;
   font-size: clamp(1rem, 10vh, 2.2rem);
 }
