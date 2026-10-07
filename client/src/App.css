@@ -543,6 +543,7 @@
 
 .display-caption-bar {
   min-height: 12vh;
+  max-height: 40vh;
   padding: 1.5rem 4vw;
   background: transparent;
   color: #fff;
@@ -559,14 +560,14 @@
   text-align: center;
   opacity: 0;
   transition: opacity 0.25s ease;
-  /* Long sentences clip to 2 lines instead of growing the bar or overflowing
-     it — a translated sentence can run noticeably longer than the original.
-     -webkit-box is the only way to combine multi-line clamping with
-     vertical centering; fine here since the target is Chromium/Safari/Edge. */
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-box-pack: center;
-  -webkit-line-clamp: 2;
+  /* Plain flex + wrap, no hard line cap: a hard 2-line clamp via
+     -webkit-line-clamp looked unnatural and intermittently froze instead of
+     updating on fast-changing interim text — ordinary wrapping is far more
+     robust. max-height + overflow is only a rare safety net against a truly
+     outlier sentence, not a routine 2-line limit. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
 }
 
@@ -586,6 +587,11 @@
 
 .display-embed .display-caption-bar {
   min-height: 0;
+  /* No max-height cap here: the real constraint is the height the hosting
+     site gives the <iframe> itself, outside our control — if two-line text
+     gets clipped in the embed, the fix is raising the iframe's own height,
+     not capping our content shorter than it needs to be. */
+  max-height: none;
   padding: 0.5rem 3vw;
   font-size: clamp(1rem, 10vh, 2.2rem);
 }
