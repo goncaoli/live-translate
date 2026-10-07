@@ -590,8 +590,10 @@
   /* The site's iframe is sized for exactly 2 lines, so text needs to wrap
      and stay within that — but capped in em (2 lines × the 1.3 line-height
      below), not via the old -webkit-line-clamp hack that caused the freeze.
-     A plain max-height + overflow never has that rendering issue. */
+     A plain max-height + overflow never has that rendering issue — but
+     needs overflow:hidden too, or max-height alone doesn't clip anything. */
   max-height: 2.6em;
+  overflow: hidden;
   padding: 0.5rem 3vw;
   font-size: clamp(1rem, 10vh, 2.2rem);
 }
