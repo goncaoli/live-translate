@@ -543,7 +543,6 @@
 
 .display-caption-bar {
   min-height: 12vh;
-  max-height: 40vh;
   padding: 1.5rem 4vw;
   background: transparent;
   color: #fff;
@@ -560,15 +559,16 @@
   text-align: center;
   opacity: 0;
   transition: opacity 0.25s ease;
-  /* Plain flex + wrap, no hard line cap: a hard 2-line clamp via
-     -webkit-line-clamp looked unnatural and intermittently froze instead of
-     updating on fast-changing interim text — ordinary wrapping is far more
-     robust. max-height + overflow is only a rare safety net against a truly
-     outlier sentence, not a routine 2-line limit. */
+  /* Plain flex + wrap, no cap at all: .display-page is flex column with
+     justify-content:flex-end, so this bar already grows upward from the
+     bottom as text needs more lines — no container forces a fixed height
+     here. A max-height previously here clipped top AND bottom lines evenly
+     (align-items:center centers content inside the capped box, so overflow
+     gets cut from both ends) whenever a sentence ran to 3 lines, which was
+     routine, not a rare outlier — so the cap did more harm than good. */
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
 }
 
 .display-caption-bar.is-visible {
