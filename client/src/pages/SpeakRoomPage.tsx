@@ -53,6 +53,7 @@ export default function SpeakRoomPage() {
   const presenceConnectionRef = useRef<HubConnection | null>(null);
   const listeningRef = useRef(false);
   const lastInterimSentRef = useRef(0);
+  const tokenRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const room = agenda?.rooms.find((r) => r.id === roomId);
   const currentTalk = agenda ? findCurrentTalk(agenda.talks, roomId, now) : undefined;
@@ -111,6 +112,7 @@ export default function SpeakRoomPage() {
   useEffect(() => {
     return () => {
       if (recognizerRef.current) stopTranslation(recognizerRef.current).catch(() => {});
+      if (tokenRefreshIntervalRef.current) clearInterval(tokenRefreshIntervalRef.current);
     };
   }, []);
 
@@ -156,6 +158,21 @@ export default function SpeakRoomPage() {
       setListening(true);
       listeningRef.current = true;
       roomStarted(roomId, speakerToken, sourceLanguage).catch(() => {});
+
+      // The Speech auth token expires after 10 minutes — the underlying
+      // connection can outlive that for a while, but eventually gets cut
+      // once it's stale (this is what was causing the multi-hour dropouts).
+      // Refresh it in place on the live recognizer every 9 minutes so a
+      // room that stays open all day never hits that wall.
+      tokenRefreshIntervalRef.current = setInterval(async () => {
+        try {
+          const { token: freshToken } = await getSpeechToken(roomId, speakerToken);
+          if (recognizerRef.current) recognizerRef.current.authorizationToken = freshToken;
+        } catch {
+          // Best-effort — if this particular refresh fails, the next one 9
+          // minutes later gets another chance before the token actually expires.
+        }
+      }, 9 * 60 * 1000);
     } catch (err) {
       setError(friendlyError(err));
     } finally {
@@ -164,6 +181,10 @@ export default function SpeakRoomPage() {
   }
 
   async function stop() {
+    if (tokenRefreshIntervalRef.current) {
+      clearInterval(tokenRefreshIntervalRef.current);
+      tokenRefreshIntervalRef.current = null;
+    }
     if (recognizerRef.current) {
       await stopTranslation(recognizerRef.current);
       recognizerRef.current = null;
