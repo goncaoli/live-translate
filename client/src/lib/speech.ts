@@ -24,6 +24,13 @@ export async function startTranslation(
   const config = sdk.SpeechTranslationConfig.fromAuthorizationToken(token, region);
   config.speechRecognitionLanguage = sourceLang;
   targetLangs.forEach((lang) => config.addTargetLanguage(lang));
+  // Default segmentation ends a phrase on silence alone — on fast, run-on
+  // speech (or filler sounds like "ah, ah") that never pauses, this lets a
+  // "recognizing" segment grow into a whole run-on block instead of closing
+  // at natural sentence breaks, which showed up as captions feeling stuck
+  // on the previous sentence. Semantic segmentation closes a phrase on
+  // sentence-ending punctuation/meaning instead, independent of pauses.
+  config.setProperty(sdk.PropertyId.Speech_SegmentationStrategy, "Semantic");
 
   const audioConfig = sdk.AudioConfig.fromDefaultMicrophoneInput();
   const recognizer = new sdk.TranslationRecognizer(config, audioConfig);
